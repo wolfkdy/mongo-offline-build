@@ -76,9 +76,10 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
 - `REPO_CACHE`, `BAZEL_REAL` default to package paths; `OUTPUT_USER_ROOT`
   defaults to `<package>/bazel-root` (build scratch + outputs live there).
 
-Expected duration: hours (a 4-core/16GB machine took ~8 h wall clock; a 32-core
-server takes well under 2 h). Progress lines look like
-`[12,345 / 20,621] Compiling ...` — first number = completed actions. The final
+Expected duration: a few hours (~10,000 build actions; a 4-core/16GB machine
+takes roughly 4-5 h wall clock, a 32-core server well under 1 h). Progress
+lines look like `[3,456 / 10,123] Compiling ...` — first number = completed
+actions. The final
 links each run many minutes and may show as `[Sched] Linking ...` while queued;
 that is normal (see Troubleshooting #7).
 
