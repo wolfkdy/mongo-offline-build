@@ -229,7 +229,7 @@ python3 -m venv ~/mongo-pyenv          # optional but recommended
 | 10 | A rebuild after editing sources re-runs many actions | Expected Bazel behavior; only affected actions rerun. Never delete `OUTPUT_USER_ROOT` between attempts — it holds the action cache. |
 | 11 | `Failed to install python deps [...]` / pip `Name or service not known` | The wheelhouse isn't reaching pip. Verify `cache/wheelhouse/` exists next to compile.sh (or set `WHEELHOUSE=<abs path>`) and that you're using the provided compile.sh; a version that pip rejects means the wheelhouse file's hash doesn't match `poetry.lock` — restore the shipped wheelhouse contents. |
 | 12 | `no such package 'src/mongo/.../.auto_header'` at analysis | The auto-header generator ran without ripgrep. Ensure `tools/rg` and `tools/fd` are present and executable (compile.sh exports `RG_PATH`/`FD_PATH`), then rerun. |
-| 13 | Built mongod fails to start / `ldd` shows `libatomic.so.1 => not found` | Runtime dependency, not a build failure: `yum install -y libatomic`. Without a repo, the gcc14 installation ships it — `find <GCC_PREFIX> -name 'libatomic.so.1*'`, then copy it to `/usr/lib64/` + `ldconfig`, or set `LD_LIBRARY_PATH`. |
+| 13 | `ldd` shows `libatomic.so.1 => not found` | Binaries built with an older compile.sh linked libatomic dynamically. Current compile.sh links it statically from gcc's own `libatomic.a` — `git pull` and rerun compile.sh (relink-only, fast). Quick unblock without relinking: `yum install -y libatomic`. |
 
 ## Rebuilding this package (networked machine)
 
