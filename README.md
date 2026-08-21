@@ -6,34 +6,47 @@ produced and verified on 2026-08-21. If you are an automation/LLM agent: follow
 this document top to bottom; every known failure mode is listed in
 [Troubleshooting](#troubleshooting) with its fix.
 
-> **Canonical copies:** `compile.sh`, `prefetch.sh`, `mongo-8.3.8-offline.patch`,
-> `resmoke-requirements.txt`, and this README live at this repository's root and
-> are the source of truth — always prefer them over the copies inside the
-> release tarball (the tarball only needs re-downloading when the heavy assets
-> change: repo cache, wheels, tool binaries).
+## How this package is delivered
 
-## Package layout
+Two parts, combined at setup time:
+
+1. **This git repository** — the light, canonical files: this README,
+   `compile.sh`, `prefetch.sh`, `mongo-8.3.8-offline.patch`,
+   `resmoke-requirements.txt`. Script/doc fixes land here; always use these.
+2. **The release-asset tarball** (`mongo-8.3.8-offline-build.tar.gz`, ~833 MB,
+   from this repo's Releases page) — only the heavy, rarely-changing assets.
+
+Setup on the offline machine (after transferring both):
+
+```bash
+git clone <this repo>   # or just copy the 5 files into a directory
+cd mongo-offline-build
+sha256sum -c mongo-8.3.8-offline-build.tar.gz.sha256      # verify transfer
+tar -xzf /path/to/mongo-8.3.8-offline-build.tar.gz --strip-components=1
+chmod +x compile.sh prefetch.sh tools/*
+```
+
+After extraction the directory looks like:
 
 ```
-mongo-8.3.8-offline-build/
-├── README-OFFLINE-BUILD.md        this file
-├── compile.sh                     THE build script (offline & online capable)
-├── prefetch.sh                    rebuilds this package on a networked machine
-├── patches/mongo-8.3.8-offline.patch   diff to apply to your r8.3.8 checkout
-├── tools/bazel-7.5.0-mongo_06d753863d-linux-x86_64   MongoDB's forked Bazel
-│                                  (sha256 ad2e23cc...78fa3; needs glibc >= 2.25)
-├── tools/bazelisk-linux-amd64     not needed offline; kept for completeness
-├── tools/rg, tools/fd             ripgrep 15.1.0 / fd 10.3.0 (used by the
-│                                  auto-header generator; compile.sh exports
-│                                  RG_PATH/FD_PATH so nothing is downloaded)
+mongo-offline-build/
+├── README.md                      this file            (from git)
+├── compile.sh                     THE build script     (from git)
+├── prefetch.sh                    package rebuilder    (from git)
+├── mongo-8.3.8-offline.patch      diff for your r8.3.8 checkout (from git)
+├── resmoke-requirements.txt       resmoke dep pins     (from git)
+├── tools/                         forked bazel, bazelisk, rg, fd   (tarball)
+│   └── bazel-7.5.0-mongo_06d753863d-linux-x86_64  (needs glibc >= 2.25)
 ├── cache/repo_cache/              Bazel repository cache: every external
-│                                  dependency of the build, keyed by sha256
-├── cache/wheelhouse/              the exact lock-pinned PyPI wheels/sdists the
-│                                  build needs (pip resolves from here offline)
-├── python-wheels/                 pip wheels (py3.12, x86_64), see below
-├── resmoke-wheels/cp313,cp312/    resmoke test-runner dependencies as wheels
-└── resmoke-requirements.txt       pinned dependency list for resmoke
+│                                  dependency, keyed by sha256      (tarball)
+├── cache/wheelhouse/              lock-pinned PyPI wheels/sdists the build
+│                                  needs (pip resolves offline)     (tarball)
+├── python-wheels/                 py3.12 wheels, optional          (tarball)
+└── resmoke-wheels/cp313,cp312/    resmoke test-runner deps         (tarball)
 ```
+
+The patch path in the build steps below is `mongo-8.3.8-offline.patch` at this
+directory's root.
 
 ## Prerequisites on the offline machine
 
@@ -59,7 +72,7 @@ mongo git repository. First put it at r8.3.8 and apply the offline patch:
 ```bash
 cd /path/to/your/mongo            # your existing checkout with git history
 git checkout r8.3.8               # or: git checkout -b offline-8.3.8 r8.3.8
-git apply /path/to/mongo-8.3.8-offline-build/patches/mongo-8.3.8-offline.patch
+git apply /path/to/mongo-offline-build/mongo-8.3.8-offline.patch
 git status                        # should show exactly 4 modified files
 ```
 
