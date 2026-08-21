@@ -6,6 +6,12 @@ produced and verified on 2026-08-21. If you are an automation/LLM agent: follow
 this document top to bottom; every known failure mode is listed in
 [Troubleshooting](#troubleshooting) with its fix.
 
+> **Canonical copies:** `compile.sh`, `prefetch.sh`, `mongo-8.3.8-offline.patch`,
+> `resmoke-requirements.txt`, and this README live at this repository's root and
+> are the source of truth — always prefer them over the copies inside the
+> release tarball (the tarball only needs re-downloading when the heavy assets
+> change: repo cache, wheels, tool binaries).
+
 ## Package layout
 
 ```
