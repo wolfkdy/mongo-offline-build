@@ -1,0 +1,143 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 240ed7af425..73adca9fe07 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -116,11 +116,13 @@ single_version_override(
+ )
+ 
+ bazel_dep(name = "rules_poetry", version = "")
+-git_override(
++archive_override(
+     module_name = "rules_poetry",
+-    commit = "092d43107d13e711ac4ac92050d8b570bcc8ef43",
++    integrity = "sha256-UzoBeHZ75NeaZ65DiQlwSFIX8DGt8JDvKMXBjo/TN9g=",
++    patch_strip = 0,
+     patches = ["//bazel/rules_poetry:rules_poetry.patch"],
+-    remote = "https://github.com/mongodb-forks/rules_poetry",
++    strip_prefix = "rules_poetry-092d43107d13e711ac4ac92050d8b570bcc8ef43",
++    urls = ["https://github.com/mongodb-forks/rules_poetry/archive/092d43107d13e711ac4ac92050d8b570bcc8ef43.tar.gz"],
+ )
+ 
+ #
+diff --git a/bazel/rules_poetry/rules_poetry.patch b/bazel/rules_poetry/rules_poetry.patch
+index 744794a5996..448c2329fbb 100644
+--- a/bazel/rules_poetry/rules_poetry.patch
++++ b/bazel/rules_poetry/rules_poetry.patch
+@@ -11,12 +11,10 @@ index 0000000..c09945f
+ +bazel_dep(name = "bazel_skylib", version = "1.5.0")
+ +bazel_dep(name = "platforms", version = "0.0.8")
+ diff --git rules_poetry/defs.bzl rules_poetry/defs.bzl
+-index 5e0df55..10aa491 100644
++index b3c070b..b10fd3a 100644
+ --- rules_poetry/defs.bzl
+ +++ rules_poetry/defs.bzl
+-@@ -5,8 +5,11 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+- # We no longer need to use this due to updates to rules_python, but we have not erased it for backward compatibility.
+- def deterministic_env():
++@@ -7,6 +7,9 @@ def deterministic_env():
+      return {
+          # lifted from https://github.com/bazelbuild/rules_python/issues/154
+          "CFLAGS": "-g0",  # debug symbols contain non-deterministic file paths
+@@ -26,3 +24,48 @@ index 5e0df55..10aa491 100644
+          "PATH": "/bin:/usr/bin:/usr/local/bin",
+          "PYTHONDONTWRITEBYTECODE": "1",
+          "PYTHONHASHSEED": "0",
++@@ -107,7 +110,13 @@ def _download(ctx, requirements):
++     args.add(destination.path)
++     args.add("-r")
++     args.add(requirements)
++-    if ctx.attr.source_url != "":
+++    if ctx.attr.wheelhouse != "":
+++        # Offline mode: resolve every wheel from a local directory instead of
+++        # (any) index. Hashes from the lockfile are still enforced by pip.
+++        args.add("--no-index")
+++        args.add("--find-links")
+++        args.add(ctx.attr.wheelhouse)
+++    elif ctx.attr.source_url != "":
++         args.add("-i")
++         args.add(ctx.attr.source_url)
++ 
++@@ -153,7 +162,8 @@ download_wheel = rule(
++         "version": attr.string(mandatory = True),
++         "hashes": attr.string_list(mandatory = True, allow_empty = False),
++         "marker": attr.string(mandatory = True),
++-        "source_url": attr.string(mandatory = True)
+++        "source_url": attr.string(mandatory = True),
+++        "wheelhouse": attr.string(default = ""),
++     },
++     toolchains = ["@bazel_tools//tools/python:toolchain_type"],
++ )
++diff --git rules_poetry/poetry.bzl rules_poetry/poetry.bzl
++index f63b194..6c2a0b1 100644
++--- rules_poetry/poetry.bzl
+++++ rules_poetry/poetry.bzl
++@@ -291,6 +291,7 @@ download_wheel(
++     hashes = {hashes},
++     marker = "{marker}",
++     source_url = "{source_url}",
+++    wheelhouse = "{wheelhouse}",
++     visibility = ["//visibility:private"],
++     tags = [{download_tags}, "requires-network"],
++ )
++@@ -351,6 +352,7 @@ selects.config_setting_group(
++             hashes = package.hashes,
++             marker = marker,
++             source_url = package.source_url or "",
+++            wheelhouse = repository_ctx.os.environ.get("MONGO_PIP_WHEELHOUSE", ""),
++             install_tags = ", ".join(install_tags),
++             download_tags = ", ".join(download_tags),
++             dependencies = [":install_%s" % _clean_name(package.name)] +
+diff --git a/bazel/wrapper_hook/write_wrapper_hook_bazelrc.py b/bazel/wrapper_hook/write_wrapper_hook_bazelrc.py
+index e0f156e5e9c..983eb1ab430 100644
+--- a/bazel/wrapper_hook/write_wrapper_hook_bazelrc.py
++++ b/bazel/wrapper_hook/write_wrapper_hook_bazelrc.py
+@@ -24,8 +24,33 @@ def get_mongo_arch(args):
+ 
+ 
+ def get_mongo_version(args):
+-    proc = subprocess.run(["git", "describe", "--abbrev=0"], capture_output=True, text=True)
+-    return proc.stdout.strip()[1:]
++    env_version = os.environ.get("MONGO_VERSION", "")
++    if env_version:
++        return env_version.lstrip("r")
++    try:
++        proc = subprocess.run(["git", "describe", "--abbrev=0"], capture_output=True, text=True)
++        version = proc.stdout.strip()[1:]
++        if version:
++            return version
++    except OSError:
++        pass
++    repo_root = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
++    version_file = os.path.join(repo_root, ".mongo_version")
++    if os.path.exists(version_file):
++        with open(version_file, encoding="utf-8") as f:
++            version = f.read().strip().lstrip("r")
++            if version:
++                return version
++    print(
++        "ERROR: could not determine the MongoDB version: the MONGO_VERSION "
++        "environment variable is unset, 'git describe' is unavailable (no git "
++        "binary or not a git checkout), and no .mongo_version file exists at "
++        f"the repo root ({repo_root}). Set MONGO_VERSION (e.g. "
++        "MONGO_VERSION=8.3.8) or create a .mongo_version file containing the "
++        "version.",
++        file=sys.stderr,
++    )
++    raise RuntimeError("unable to determine MONGO_VERSION")
+ 
+ 
+ def write_wrapper_hook_bazelrc(args):
+diff --git a/buildscripts/resmokelib/configure_resmoke.py b/buildscripts/resmokelib/configure_resmoke.py
+index 5f51297d17a..4e28009899d 100644
+--- a/buildscripts/resmokelib/configure_resmoke.py
++++ b/buildscripts/resmokelib/configure_resmoke.py
+@@ -359,6 +359,9 @@ def _find_resmoke_wrappers():
+ 
+ def _should_skip_grpc_tracing():
+     """Check whether grpc tracing is enabled on the current machine's OS."""
++    if os.environ.get("RESMOKE_SKIP_OTEL_EXPORT"):
++        # Offline/air-gapped environments cannot reach the OTel collector.
++        return True
+     return sys.platform.startswith("linux") and platform.machine().startswith(
+         ("ppc", "powerpc", "s390")
+     )
