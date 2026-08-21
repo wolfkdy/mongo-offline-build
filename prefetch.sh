@@ -57,7 +57,7 @@ OUTPUT_USER_ROOT="$PACK_DIR/bazel-root-prefetch" \
 "$PACK_DIR/compile.sh" 2>&1 | tee "$PACK_DIR/logs/prefetch-build.log"
 
 # 4. Emit the source diff (the offline machine applies it to its own checkout).
-git -C "$MONGO_GIT_DIR" diff r8.3.8 -- MODULE.bazel \
+git -C "$MONGO_GIT_DIR" diff r8.3.8 -- MODULE.bazel src/mongo/db/BUILD.bazel \
     bazel/wrapper_hook/write_wrapper_hook_bazelrc.py \
     bazel/rules_poetry/rules_poetry.patch \
     buildscripts/resmokelib/configure_resmoke.py \

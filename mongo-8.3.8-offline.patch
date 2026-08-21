@@ -141,3 +141,29 @@ index 5f51297d17a..4e28009899d 100644
      return sys.platform.startswith("linux") and platform.machine().startswith(
          ("ppc", "powerpc", "s390")
      )
+diff --git a/src/mongo/db/BUILD.bazel b/src/mongo/db/BUILD.bazel
+index bfc5fc3b6e6..06e3fc6b0f9 100644
+--- a/src/mongo/db/BUILD.bazel
++++ b/src/mongo/db/BUILD.bazel
+@@ -2807,7 +2807,9 @@ mongo_cc_binary(
+         "@platforms//os:linux": [
+             "-ldl",
+             "-lrt",
+-            "-latomic",
++            # Link libatomic statically so the binary does not depend on
++            # libatomic.so.1 being installed on the target system.
++            "-l:libatomic.a",
+         ],
+         "@platforms//os:windows": [
+             "-latomic",
+@@ -2860,7 +2862,9 @@ mongo_cc_binary(
+         "@platforms//os:linux": [
+             "-ldl",
+             "-lrt",
+-            "-latomic",
++            # Link libatomic statically so the binary does not depend on
++            # libatomic.so.1 being installed on the target system.
++            "-l:libatomic.a",
+         ],
+         "@platforms//os:windows": [
+             "-latomic",

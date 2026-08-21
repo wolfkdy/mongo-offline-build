@@ -162,16 +162,6 @@ LINKOPTS=(
 )
 if [ "$STATIC_CXX_RUNTIME" = "1" ]; then
     LINKOPTS+=(-static-libstdc++ -static-libgcc)
-    # mongo's BUILD files pass an explicit -latomic, which links the shared
-    # libatomic.so.1 (a runtime dependency not all systems have installed).
-    # Expose a directory containing ONLY the static archive ahead of gcc's own
-    # search paths so -latomic resolves statically.
-    LIBATOMIC_A=$("$CC" -print-file-name=libatomic.a)
-    if [ -f "$LIBATOMIC_A" ]; then
-        mkdir -p "$SOURCE_DIR/.static-libs"
-        cp -f "$LIBATOMIC_A" "$SOURCE_DIR/.static-libs/libatomic.a"
-        LINKOPTS+=("-L$SOURCE_DIR/.static-libs")
-    fi
 fi
 
 BAZEL_ARGS=(

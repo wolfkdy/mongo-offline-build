@@ -73,7 +73,7 @@ mongo git repository. First put it at r8.3.8 and apply the offline patch:
 cd /path/to/your/mongo            # your existing checkout with git history
 git checkout r8.3.8               # or: git checkout -b offline-8.3.8 r8.3.8
 git apply /path/to/mongo-offline-build/mongo-8.3.8-offline.patch
-git status                        # should show exactly 4 modified files
+git status                        # should show exactly 5 modified files
 ```
 
 Then build:
@@ -229,7 +229,7 @@ python3 -m venv ~/mongo-pyenv          # optional but recommended
 | 10 | A rebuild after editing sources re-runs many actions | Expected Bazel behavior; only affected actions rerun. Never delete `OUTPUT_USER_ROOT` between attempts — it holds the action cache. |
 | 11 | `Failed to install python deps [...]` / pip `Name or service not known` | The wheelhouse isn't reaching pip. Verify `cache/wheelhouse/` exists next to compile.sh (or set `WHEELHOUSE=<abs path>`) and that you're using the provided compile.sh; a version that pip rejects means the wheelhouse file's hash doesn't match `poetry.lock` — restore the shipped wheelhouse contents. |
 | 12 | `no such package 'src/mongo/.../.auto_header'` at analysis | The auto-header generator ran without ripgrep. Ensure `tools/rg` and `tools/fd` are present and executable (compile.sh exports `RG_PATH`/`FD_PATH`), then rerun. |
-| 13 | `ldd` shows `libatomic.so.1 => not found` | Binaries built with an older compile.sh linked libatomic dynamically. Current compile.sh links it statically from gcc's own `libatomic.a` — `git pull` and rerun compile.sh (relink-only, fast). Quick unblock without relinking: `yum install -y libatomic`. |
+| 13 | `ldd` shows `libatomic.so.1 => not found` | Built from a tree with an older patch: the current mongo-8.3.8-offline.patch links libatomic statically (`-l:libatomic.a` in src/mongo/db/BUILD.bazel). Re-apply the current patch and rerun compile.sh (relink-only, fast). Quick unblock without relinking: `yum install -y libatomic`. |
 
 ## Rebuilding this package (networked machine)
 
