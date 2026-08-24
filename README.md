@@ -100,6 +100,9 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
   machine to compile an action populates it, others fetch instead of compiling.
   The server binary ships in the package: on one machine run
   `tools/bazel-remote --dir /data/bazel-cache --max_size 200 --grpc_address :9092`.
+  Machines sharing a cache MUST have identical gcc versions.
+  The server binary ships in the package: on one machine run
+  `tools/bazel-remote --dir /data/bazel-cache --max_size 200 --grpc_address :9092`.
 
 Expected duration: a few hours (~10,000 build actions; a 4-core/16GB machine
 takes roughly 4-5 h wall clock, a 32-core server well under 1 h). Progress
