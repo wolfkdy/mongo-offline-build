@@ -35,7 +35,8 @@ mongo-offline-build/
 ├── prefetch.sh                    package rebuilder    (from git)
 ├── mongo-8.3.8-offline.patch      diff for your r8.3.8 checkout (from git)
 ├── resmoke-requirements.txt       resmoke dep pins     (from git)
-├── tools/                         forked bazel, bazelisk, rg, fd   (tarball)
+├── tools/                         forked bazel, bazelisk, rg, fd,
+│                                  bazel-remote (LAN cache server)  (tarball)
 │   └── bazel-7.5.0-mongo_06d753863d-linux-x86_64  (needs glibc >= 2.25)
 ├── cache/repo_cache/              Bazel repository cache: every external
 │                                  dependency, keyed by sha256      (tarball)
@@ -97,6 +98,8 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
 - `REMOTE_CACHE` optional: a LAN Bazel cache (e.g. `grpc://server:9092` running
   bazel-remote) shared between machines with identical gcc versions; the first
   machine to compile an action populates it, others fetch instead of compiling.
+  The server binary ships in the package: on one machine run
+  `tools/bazel-remote --dir /data/bazel-cache --max_size 200 --grpc_address :9092`.
 
 Expected duration: a few hours (~10,000 build actions; a 4-core/16GB machine
 takes roughly 4-5 h wall clock, a 32-core server well under 1 h). Progress
