@@ -90,6 +90,7 @@ $( [ -n "${OUTPUT_USER_ROOT:-}" ] && echo "startup --output_user_root=$OUTPUT_US
 $( [ -n "$WHEELHOUSE" ] && echo "common --repo_env=MONGO_PIP_WHEELHOUSE=$WHEELHOUSE" )
 common --repository_cache=$REPO_CACHE
 common --lockfile_mode=$LOCKFILE_MODE
+$( [ -n "${REMOTE_CACHE:-}" ] && echo "common:local --remote_cache=$REMOTE_CACHE" )
 common --repo_env=no_c++_toolchain=1
 # Kill every remote endpoint (EngFlow remote exec/cache, BES telemetry).
 common --remote_executor=
