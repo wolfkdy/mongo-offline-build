@@ -35,6 +35,10 @@ mongo-offline-build/
 ├── prefetch.sh                    package rebuilder    (from git)
 ├── mongo-8.3.8-offline.patch      diff for your r8.3.8 checkout (from git)
 ├── resmoke-requirements.txt       resmoke dep pins     (from git)
+├── nativelink-farm/               remote-execution farm: NativeLink configs,
+│                                  lease controller, deploy scripts (from git)
+│                                  -> see nativelink-farm/README.md and
+│                                     nativelink-farm/DEPLOY-TODO.md
 ├── tools/                         forked bazel, bazelisk, rg, fd,
 │                                  bazel-remote (LAN cache server),
 │                                  nativelink (remote-exec farm)    (tarball)
