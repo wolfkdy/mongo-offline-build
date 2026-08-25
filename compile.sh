@@ -122,9 +122,11 @@ if [ "$EXEC_MODE" != "local" ]; then
     add_rc "common:local --remote_executor=$REMOTE_EXECUTOR"
     add_rc "common:local --remote_instance_name=main"
     add_rc "common:local --remote_timeout=3600"
-    add_rc "common:local --remote_default_exec_properties=pool=build"
-    add_rc "common:local --remote_default_exec_properties=cpu_count=1"
-    add_rc "common:local --remote_default_exec_properties=memory_kb=2097152"
+    # NOTE: --remote_default_exec_properties must NOT go in a common:local rc
+    # line: --config=local lands on the command line twice (ours + the mongo
+    # wrapper's auto-append), the config expands twice, and this key-accumulating
+    # map flag errors on duplicate keys. It is passed once on the command line
+    # in BAZEL_ARGS below instead.
     add_rc "common:local --jobs=${JOBS:-64}"
     add_rc "common:local --strategy=DownloadWheel=local"
     add_rc "common:local --strategy=CppLink=local"
@@ -272,6 +274,16 @@ done
 # The wrapper hook appends its own --config=local, whose expansion overrides
 # an explicit --jobs; --local_cpu_resources limits concurrency reliably.
 [ -n "${JOBS:-}" ] && BAZEL_ARGS+=("--jobs=$JOBS" "--local_cpu_resources=$JOBS")
+
+# Farm resource declarations: on the command line, NOT in common:local rc lines
+# (see the note in the rc-generation block above).
+if [ "$EXEC_MODE" != "local" ]; then
+    BAZEL_ARGS+=(
+        "--remote_default_exec_properties=pool=build"
+        "--remote_default_exec_properties=cpu_count=1"
+        "--remote_default_exec_properties=memory_kb=2097152"
+    )
+fi
 
 # output_user_root is set via a startup line in .bazelrc.local (above) so the
 # wrapper's nested bazel invocations share the same output root.
