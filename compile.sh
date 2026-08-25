@@ -117,6 +117,11 @@ add_rc() { REMOTE_RC="$REMOTE_RC$1"$'\n'; }
 [ -n "${REMOTE_CACHE:-}" ] && add_rc "common:local --remote_cache=$REMOTE_CACHE"
 if [ -n "${REMOTE_CACHE:-}${REMOTE_EXECUTOR:-}" ]; then
     add_rc "common:local --noremote_upload_local_results"
+    # mongo's .bazelrc "disables" keepalive with --grpc_keepalive_time=0s under
+    # config=local; gRPC rejects non-positive keepalive when a channel is
+    # actually created ("keepalive time must be positive"). Override with a
+    # positive value (this file imports later, so it wins within the config).
+    add_rc "common:local --grpc_keepalive_time=30s"
 fi
 if [ "$EXEC_MODE" != "local" ]; then
     add_rc "common:local --remote_executor=$REMOTE_EXECUTOR"
