@@ -174,7 +174,10 @@ if [ "$EXEC_MODE" != "local" ]; then
     # glibc floor is the client's - they cannot execute on older workers.
     add_rc "common:local --strategy=Genrule=local"
     add_rc "common:local --strategy=GenProtoDescriptorSet=local"
-    add_rc "common:local --strategy=ProtoCompile=local"
+    # grpc's protoc-running rule has its own mnemonic (grpc~/bazel/*.bzl):
+    add_rc "common:local --strategy=ProtocInvocation=local"
+    # runs the prebuilt gpg binary from mongo's S3 tarball:
+    add_rc "common:local --strategy=GpgSign=local"
 fi
 if [ "$EXEC_MODE" = "dynamic" ]; then
     add_rc "common:local --internal_spawn_scheduler"
