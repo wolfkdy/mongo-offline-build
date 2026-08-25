@@ -27,6 +27,12 @@
 #   STATIC_CXX_RUNTIME 1 = link libstdc++/libgcc statically (default: 1)
 #   JOBS          bazel --jobs                 (default: bazel decides)
 #   OUTPUT_USER_ROOT  bazel output user root   (default: <script dir>/bazel-root)
+#   BINUTILS_DIR  directory containing as/ld (binutils >= 2.35) that gcc should
+#                 use instead of each host's system binutils (passed via -B).
+#                 Needed when workers' system binutils is too old for e.g. the
+#                 'unique' section flag in tcmalloc's rseq assembly. Must be at
+#                 the SAME path on every machine in remote/dynamic modes.
+#                 (default: off - gcc finds as/ld normally)
 #   SYSROOT       path to a sysroot tree (usr/include with glibc/openssl/curl
 #                 headers, usr/lib64 with link stubs). All compiles and links
 #                 use it instead of the host's /usr, making builds independent
@@ -78,6 +84,12 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 GCC_MAJOR=$("$CC" -dumpversion | cut -d. -f1)
 [ "$GCC_MAJOR" -ge 14 ] 2>/dev/null || die "gcc >= 14 required, found $("$CC" --version | head -1)"
+
+BINUTILS_DIR=${BINUTILS_DIR:-}
+if [ -n "$BINUTILS_DIR" ]; then
+    [ -x "$BINUTILS_DIR/as" ] || die "BINUTILS_DIR invalid: $BINUTILS_DIR/as not found"
+    BINUTILS_DIR=$(cd "$BINUTILS_DIR" && pwd)
+fi
 
 SYSROOT=${SYSROOT:-}
 if [ -n "$SYSROOT" ]; then
@@ -227,6 +239,11 @@ COPTS=(
     -w
     -Wno-error
 )
+# Uniform binutils: -B makes gcc look here first for as/ld on every machine.
+if [ -n "$BINUTILS_DIR" ]; then
+    COPTS+=("-B$BINUTILS_DIR")
+    LINKOPTS_EXTRA_BINUTILS=("-B$BINUTILS_DIR")
+fi
 
 CXXOPTS=(
     -std=c++20
@@ -244,6 +261,7 @@ LINKOPTS=(
 if [ "$STATIC_CXX_RUNTIME" = "1" ]; then
     LINKOPTS+=(-static-libstdc++ -static-libgcc)
 fi
+[ -n "${LINKOPTS_EXTRA_BINUTILS:-}" ] && LINKOPTS+=("${LINKOPTS_EXTRA_BINUTILS[@]}")
 
 BAZEL_ARGS=(
     build

@@ -15,7 +15,12 @@
       内嵌的是发起机 gcc 的**绝对路径**。所有发起机 + worker 必须在**同一路径**
       装**同一版本** gcc14(建议系统包管理装到 `/usr`),外加 openssl-devel、
       libcurl-devel、binutils、libatomic。
-      验证:任选发起机与 worker 各跑 `<路径>/bin/g++ --version`,输出一致。
+      **binutils 必须 ≥2.35** 且全网一致(tcmalloc 的 rseq 汇编用到 2.35 的
+      `unique` 段标志);老机器升不动系统包时,把新 binutils 的 `as`/`ld`
+      放到全网统一目录,构建时传 `BINUTILS_DIR=<目录>`。
+      验证:任选发起机与 worker 各跑 `<路径>/bin/g++ --version` 输出一致;
+      `echo '.section .tdata,"awT",@progbits,unique,1' | <as> - -o /dev/null`
+      无报错。
 - [ ] **ssh 免密**:中转机(控制器)→ 每台 worker 机 root 免密
       (`ssh -o BatchMode=yes root@<worker> true` 返回 0)。
 - [ ] **端口放行**:开发机→中转机 50051/50052;worker→中转机 50061;
