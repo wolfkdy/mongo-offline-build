@@ -169,6 +169,12 @@ if [ "$EXEC_MODE" != "local" ]; then
     # Runs hermetic python + the cryptography wheel (_rust.abi3.so, needs
     # glibc >= 2.28): must not land on older-glibc workers.
     add_rc "common:local --strategy=CertificateGenerator=local"
+    # Actions that RUN tools built during this build (protoc, upb/grpc
+    # plugins, ...): those tools are linked locally (CppLink=local), so their
+    # glibc floor is the client's - they cannot execute on older workers.
+    add_rc "common:local --strategy=Genrule=local"
+    add_rc "common:local --strategy=GenProtoDescriptorSet=local"
+    add_rc "common:local --strategy=ProtoCompile=local"
 fi
 if [ "$EXEC_MODE" = "dynamic" ]; then
     add_rc "common:local --internal_spawn_scheduler"
