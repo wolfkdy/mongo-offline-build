@@ -197,6 +197,8 @@ Notes:
   telemetry upload to MongoDB's OTel collector (an env switch added by the
   source patch; without it resmoke stalls on gRPC timeouts).
 - `--dbpathPrefix` must point somewhere writable (default is `/data`).
+- The venv's python points back into the build output root: deleting
+  `bazel-root/` breaks the venv; recreate it after the next build.
 - Run whole suites with e.g. `--suites=core` (no test file argument), or any
   jstest file(s) as shown. Suite definitions live under
   `buildscripts/resmokeconfig/suites/`.
