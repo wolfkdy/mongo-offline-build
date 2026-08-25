@@ -36,7 +36,8 @@ mongo-offline-build/
 ├── mongo-8.3.8-offline.patch      diff for your r8.3.8 checkout (from git)
 ├── resmoke-requirements.txt       resmoke dep pins     (from git)
 ├── tools/                         forked bazel, bazelisk, rg, fd,
-│                                  bazel-remote (LAN cache server)  (tarball)
+│                                  bazel-remote (LAN cache server),
+│                                  nativelink (remote-exec farm)    (tarball)
 │   └── bazel-7.5.0-mongo_06d753863d-linux-x86_64  (needs glibc >= 2.25)
 ├── cache/repo_cache/              Bazel repository cache: every external
 │                                  dependency, keyed by sha256      (tarball)
@@ -104,8 +105,11 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
 - `REMOTE_EXECUTOR` optional: remote-execution scheduler (e.g. `grpc://jump:50051`);
   enables local+remote DYNAMIC execution — each action races locally against the
   farm, fastest wins, so builds never get slower than local-only. Deploy the farm
-  with `nativelink-farm/` (in this repo); same identical-gcc rule applies to all
-  workers. Set `REMOTE_CACHE` alongside it (the farm serves CAS on :50052).
+  with `nativelink-farm/` (in this repo; binary ships as `tools/nativelink`);
+  same identical-gcc rule applies to all workers — and stricter: the gcc
+  INSTALL PATH must be identical across machines too. Set `REMOTE_CACHE`
+  alongside it (the farm serves CAS on :50052). Deployment checklist:
+  `nativelink-farm/DEPLOY-TODO.md`.
 
 Expected duration: a few hours (~10,000 build actions; a 4-core/16GB machine
 takes roughly 4-5 h wall clock, a 32-core server well under 1 h). Progress

@@ -75,7 +75,7 @@
 
 顺序：
 
-1. cas 机：放二进制 + `cas.json` → `nl.sh cas start`
+1. cas 机：放二进制(包内 `tools/nativelink`,v1.6.6 musl 静态构建)+ `cas.json` → `nl.sh cas start`
 2. 中转机：放 `scheduler.json` → `nl.sh scheduler start`；
    `CAS_ADDR=<cas机> nl.sh forward start`（socat 50052 → cas 机）
 3. 每台三层机器：放 `worker.json`（改 `__JUMP__`/`__CAS__` 占位符）。
@@ -95,16 +95,5 @@ lock 存在时 `nl.sh` 拒绝启动 worker，控制器误发 start 也破坏不�
 
 ## 待办 / 已知的坑
 
-- [ ] `config.toml` 里 `queue_metric_regex` 需按实际 nativelink 版本的 `/metrics`
-      输出核对指标名（schema 会变，先 `curl :50061/metrics | grep -i queue` 确认）
-- [ ] `deploy/*.json` 是按文档示例写的模板，上线前用目标版本的 nativelink 跑
-      `nativelink <config>` 验证 schema
-- [ ] `lease_client.py` 的 HTTP 模式是猜的接口形状，对接真实中间服务时改
-- [ ] lease 丢失时的 fencing：机器侧建议加 watchdog（lease 心跳文件过期即强杀 worker），
-      防止控制器挂掉后互斥被破坏
-- [ ] CAS 磁盘淘汰上限（`max_bytes`）按 cas 机实际盘大小调
-- [ ] **验证 `minimum` 属性的资源记账语义**：向单台 worker（cpu_count=10）提交
-      32 个并行 action（每个声明 cpu_count=1），确认并发稳定在 10 而不是全部
-      同时执行或串行——若只做过滤不做扣减，需要改用其他并发控制手段
-- [ ] 链接/大型测试等重型 target 在 BUILD 里标 `exec_properties`
-      （cpu_count/memory_kb），避免多个链接挤在同一台 worker 上 OOM
+内网部署所需的全部待办(含每项的验证方法)集中在 **[DEPLOY-TODO.md](DEPLOY-TODO.md)**,
+部署前按清单逐项执行。
