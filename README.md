@@ -104,6 +104,13 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
   `grpc://jump:50052`, or a standalone `tools/bazel-remote` server). In EVERY
   mode, locally-produced results are never uploaded to it (prevents mixed-glibc
   pollution); the cache is populated by the farm's remote executions.
+- `SYSROOT` optional: path to a sysroot tree (glibc + kernel + openssl + curl
+  headers in `usr/include`, link stubs in `usr/lib64`). All compiles and links
+  then use it instead of each host's `/usr`, making builds independent of the
+  machines' glibc/openssl age and pinning the binaries' glibc floor to the
+  sysroot's version. Must be at the SAME path on every machine in remote or
+  dynamic modes; toggling it triggers a full rebuild. Build the sysroot from
+  your oldest deployment-baseline machine (see nativelink-farm/DEPLOY-TODO.md).
 - `EXEC_MODE` optional: `local` (default) | `remote` | `dynamic` (default when
   `REMOTE_EXECUTOR` is set). `remote` runs every action on the farm - use for
   deliverable builds (binary glibc floor = the workers' uniform glibc);

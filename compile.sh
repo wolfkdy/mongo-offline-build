@@ -27,6 +27,13 @@
 #   STATIC_CXX_RUNTIME 1 = link libstdc++/libgcc statically (default: 1)
 #   JOBS          bazel --jobs                 (default: bazel decides)
 #   OUTPUT_USER_ROOT  bazel output user root   (default: <script dir>/bazel-root)
+#   SYSROOT       path to a sysroot tree (usr/include with glibc/openssl/curl
+#                 headers, usr/lib64 with link stubs). All compiles and links
+#                 use it instead of the host's /usr, making builds independent
+#                 of each machine's glibc/openssl age. Must live at the SAME
+#                 path on every machine in remote/dynamic modes. Toggling it
+#                 invalidates the whole action cache (full rebuild).
+#                 (default: off - use host headers/libs)
 #   REMOTE_CACHE  LAN bazel cache, e.g. grpc://jump:50052       (default: off)
 #   REMOTE_EXECUTOR  remote execution scheduler, e.g. grpc://jump:50051
 #   EXEC_MODE     local | remote | dynamic  (default: dynamic when
@@ -72,10 +79,18 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 GCC_MAJOR=$("$CC" -dumpversion | cut -d. -f1)
 [ "$GCC_MAJOR" -ge 14 ] 2>/dev/null || die "gcc >= 14 required, found $("$CC" --version | head -1)"
 
-[ -f /usr/include/openssl/ssl.h ] \
-    || die "missing system header openssl/ssl.h (install openssl-devel)"
-[ -f /usr/include/curl/curl.h ] || [ -f "/usr/include/$(uname -m)-linux-gnu/curl/curl.h" ] \
-    || die "missing system header curl/curl.h (install libcurl-devel)"
+SYSROOT=${SYSROOT:-}
+if [ -n "$SYSROOT" ]; then
+    [ -d "$SYSROOT/usr/include" ] || die "SYSROOT invalid: $SYSROOT/usr/include not found"
+    SYSROOT=$(cd "$SYSROOT" && pwd)
+    HDR_ROOT=$SYSROOT
+else
+    HDR_ROOT=""
+fi
+[ -f "$HDR_ROOT/usr/include/openssl/ssl.h" ] \
+    || die "missing header openssl/ssl.h under ${HDR_ROOT:-}/usr/include (install openssl-devel or fix SYSROOT)"
+[ -f "$HDR_ROOT/usr/include/curl/curl.h" ] || [ -f "$HDR_ROOT/usr/include/$(uname -m)-linux-gnu/curl/curl.h" ] \
+    || die "missing header curl/curl.h under ${HDR_ROOT:-}/usr/include (install libcurl-devel or fix SYSROOT)"
 
 mkdir -p "$REPO_CACHE"
 REPO_CACHE=$(cd "$REPO_CACHE" && pwd)
@@ -279,6 +294,17 @@ done
 # The wrapper hook appends its own --config=local, whose expansion overrides
 # an explicit --jobs; --local_cpu_resources limits concurrency reliably.
 [ -n "${JOBS:-}" ] && BAZEL_ARGS+=("--jobs=$JOBS" "--local_cpu_resources=$JOBS")
+
+# Sysroot: BAZEL_CONLYOPTS/CXXOPTS/LINKOPTS feed both the toolchain's builtin
+# include-directory probe (so Bazel's undeclared-inclusion check sees the
+# sysroot paths) and every compile/link command line.
+if [ -n "$SYSROOT" ]; then
+    BAZEL_ARGS+=(
+        "--repo_env=BAZEL_CONLYOPTS=--sysroot=$SYSROOT"
+        "--repo_env=BAZEL_CXXOPTS=--sysroot=$SYSROOT"
+        "--repo_env=BAZEL_LINKOPTS=--sysroot=$SYSROOT"
+    )
+fi
 
 # Farm resource declarations: on the command line, NOT in common:local rc lines
 # (see the note in the rc-generation block above).

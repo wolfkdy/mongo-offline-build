@@ -21,6 +21,20 @@
 - [ ] **端口放行**:开发机→中转机 50051/50052;worker→中转机 50061;
       worker→CAS 机 50052;中转机→CAS 机 50052。
 
+- [ ] **(可选,glibc/openssl 异构机队必做)构建并分发 sysroot**:在部署基线
+      (最老 glibc,且 ≥2.28)的机器上装 `glibc-devel kernel-headers
+      openssl-devel(≥1.1.1) libcurl-devel`,打包 `usr/include`、`usr/lib64`、
+      `lib64/ld-linux-x86-64.so.2`(保留符号链接,含文本链接脚本
+      `usr/lib64/libc.so`)。分发到**所有机器的同一路径**,构建时传
+      `SYSROOT=<路径>`。
+      验证一:`<gcc>/bin/gcc --sysroot=<路径> -E -xc -v /dev/null 2>&1 | grep include`
+      输出的搜索路径应指向 sysroot 内(gcc 需支持 --sysroot,一般都支持);
+      验证二:compile.sh 带 SYSROOT 全量构建后,
+      `objdump -T mongod | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1`
+      不高于 sysroot 的 glibc 版本。
+      注意:启用/停用 SYSROOT 都会全量重编;c-ares 等固化配置在 sysroot
+      下重新与实际头文件一致,无需改源码。
+
 ## B. 模板核对(配置按文档写成,未对过真实版本)
 
 - [ ] **验证 `deploy/*.json` schema**:每台角色机上直接跑
