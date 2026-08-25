@@ -1,0 +1,43 @@
+# lease 控制器配置。拷贝为 config.toml 后修改。
+
+[scheduler]
+# scheduler 的 Prometheus 端点（scheduler.json 里的第二个 listener）
+metrics_url = "http://127.0.0.1:50061/metrics"
+# 从 /metrics 文本里抓排队 action 数的正则，第 1 个捕获组为数值。
+# 指标名随 nativelink 版本变化，先 curl 确认再改这里。
+queue_metric_regex = 'queued_actions(?:_total)?(?:\{[^}]*\})?\s+([0-9.]+)'
+
+[scaling]
+min_workers = 0            # 常驻 warm pool 大小；>0 可消除冷启动等待
+max_workers = 20
+actions_per_worker = 10    # 估算值：与 worker 上报的 cpu_count 对齐
+scale_up_queue = 1         # 队列持续超过该值才扩容
+scale_up_delay_s = 15      # 扩容 hysteresis：超阈值需持续这么久
+idle_release_s = 300       # 队列空且 worker 空闲这么久后归还机器
+poll_interval_s = 5
+
+[lease]
+mode = "mock"              # mock | file | http
+renew_interval_s = 30      # 续租周期(file 模式下兼作"重读清单"周期)
+
+[lease.file]
+# file 模式: 机器全集来自静态清单文件,每行一个主机名,# 注释与空行忽略。
+# acquire 不修改文件,已借机器由控制器内存记账;从文件删行 = 吊销该机器。
+# 无外部仲裁,与 CI 的互斥完全依赖机器侧 ci.lock;勿让两个控制器共用一份文件。
+path = "/data/nativelink/machines.txt"
+
+[lease.http]
+# 真实中间服务的地址；接口形状在 lease_client.py 里按实际 API 改
+base_url = "http://lease.internal:8080"
+owner = "buildfarm"
+
+[lease.mock]
+# 本地联调用：假装 lease 服务手里有这些机器
+machines = ["node1", "node2", "node3"]
+
+[worker]
+ssh_user = "root"
+ssh_opts = "-o BatchMode=yes -o ConnectTimeout=5"
+start_cmd = "/data/nativelink/bin/nl.sh worker start"
+stop_cmd = "/data/nativelink/bin/nl.sh worker stop"
+check_cmd = "/data/nativelink/bin/nl.sh worker status"

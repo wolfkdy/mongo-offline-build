@@ -101,6 +101,11 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
   The server binary ships in the package: on one machine run
   `tools/bazel-remote --dir /data/bazel-cache --max_size 200 --grpc_address :9092`.
   Machines sharing a cache MUST have identical gcc versions.
+- `REMOTE_EXECUTOR` optional: remote-execution scheduler (e.g. `grpc://jump:50051`);
+  enables local+remote DYNAMIC execution — each action races locally against the
+  farm, fastest wins, so builds never get slower than local-only. Deploy the farm
+  with `nativelink-farm/` (in this repo); same identical-gcc rule applies to all
+  workers. Set `REMOTE_CACHE` alongside it (the farm serves CAS on :50052).
 
 Expected duration: a few hours (~10,000 build actions; a 4-core/16GB machine
 takes roughly 4-5 h wall clock, a 32-core server well under 1 h). Progress

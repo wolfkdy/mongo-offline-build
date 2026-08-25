@@ -1,0 +1,48 @@
+{
+  "_comment": "三层编译机 worker。__JUMP__=中转机, __CAS__=cas 机。本地 fast_slow 缓存落盘且停 worker 不清理，机器被 CI 借走再还回来缓存仍是热的。模板：上线前验证 schema。",
+  "stores": {
+    "WORKER_FAST_SLOW": {
+      "fast_slow": {
+        "fast": {
+          "filesystem": {
+            "content_path": "/data/nativelink/worker-cache/content",
+            "temp_path": "/data/nativelink/worker-cache/tmp",
+            "eviction_policy": { "max_bytes": 75000000000 }
+          }
+        },
+        "slow": {
+          "grpc": {
+            "instance_name": "main",
+            "endpoints": [{ "address": "grpc://__CAS__:50052" }],
+            "store_type": "cas"
+          }
+        }
+      }
+    },
+    "AC_REMOTE": {
+      "grpc": {
+        "instance_name": "main",
+        "endpoints": [{ "address": "grpc://__CAS__:50052" }],
+        "store_type": "ac"
+      }
+    }
+  },
+  "workers": [
+    {
+      "local": {
+        "worker_api_endpoint": { "uri": "grpc://__JUMP__:50061" },
+        "cas_fast_slow_store": "WORKER_FAST_SLOW",
+        "upload_action_result": { "ac_store": "AC_REMOTE" },
+        "work_directory": "/data/nativelink/work",
+        "platform_properties": {
+          "OSFamily": { "values": ["Linux"] },
+          "pool": { "values": ["build"] },
+          "node": { "query_cmd": "hostname" },
+          "cpu_count": { "values": ["10"] },
+          "memory_kb": { "values": ["29360128"] }
+        }
+      }
+    }
+  ],
+  "servers": []
+}

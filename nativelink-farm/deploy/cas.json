@@ -1,0 +1,37 @@
+{
+  "_comment": "cas 机: CAS + AC，filesystem 存储。max_bytes 按实际盘大小调。模板：上线前验证 schema。",
+  "stores": {
+    "CAS_MAIN": {
+      "verify": {
+        "backend": {
+          "filesystem": {
+            "content_path": "/data/nativelink/cas/content",
+            "temp_path": "/data/nativelink/cas/tmp",
+            "eviction_policy": { "max_bytes": 500000000000 }
+          }
+        },
+        "verify_size": true,
+        "verify_hash": true
+      }
+    },
+    "AC_MAIN": {
+      "filesystem": {
+        "content_path": "/data/nativelink/ac/content",
+        "temp_path": "/data/nativelink/ac/tmp",
+        "eviction_policy": { "max_bytes": 2000000000 }
+      }
+    }
+  },
+  "servers": [
+    {
+      "listener": { "http": { "socket_address": "0.0.0.0:50052" } },
+      "services": {
+        "cas": { "main": { "cas_store": "CAS_MAIN" } },
+        "ac": { "main": { "ac_store": "AC_MAIN" } },
+        "bytestream": { "cas_stores": { "main": "CAS_MAIN" } },
+        "capabilities": { "main": {} },
+        "health": {}
+      }
+    }
+  ]
+}

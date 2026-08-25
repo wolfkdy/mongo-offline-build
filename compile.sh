@@ -27,6 +27,12 @@
 #   STATIC_CXX_RUNTIME 1 = link libstdc++/libgcc statically (default: 1)
 #   JOBS          bazel --jobs                 (default: bazel decides)
 #   OUTPUT_USER_ROOT  bazel output user root   (default: <script dir>/bazel-root)
+#   REMOTE_CACHE  LAN bazel cache, e.g. grpc://jump:50052       (default: off)
+#   REMOTE_EXECUTOR  remote execution scheduler, e.g. grpc://jump:50051
+#                 enables local+remote DYNAMIC execution: every action races a
+#                 local run against the remote farm, fastest wins. Requires
+#                 identical gcc on all machines. See nativelink-farm/.
+#                 (default: off)
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -91,6 +97,18 @@ $( [ -n "$WHEELHOUSE" ] && echo "common --repo_env=MONGO_PIP_WHEELHOUSE=$WHEELHO
 common --repository_cache=$REPO_CACHE
 common --lockfile_mode=$LOCKFILE_MODE
 $( [ -n "${REMOTE_CACHE:-}" ] && echo "common:local --remote_cache=$REMOTE_CACHE" )
+$( [ -n "${REMOTE_EXECUTOR:-}" ] && printf '%s\n' \
+    "common:local --remote_executor=$REMOTE_EXECUTOR" \
+    "common:local --remote_instance_name=main" \
+    "common:local --remote_timeout=3600" \
+    "common:local --remote_default_exec_properties=pool=build" \
+    "common:local --remote_default_exec_properties=cpu_count=1" \
+    "common:local --remote_default_exec_properties=memory_kb=2097152" \
+    "common:local --jobs=${JOBS:-64}" \
+    "common:local --internal_spawn_scheduler" \
+    "common:local --spawn_strategy=dynamic" \
+    "common:local --experimental_dynamic_slow_remote_time=3s" \
+    "common:local --strategy=DownloadWheel=local" )
 common --repo_env=no_c++_toolchain=1
 # Kill every remote endpoint (EngFlow remote exec/cache, BES telemetry).
 common --remote_executor=

@@ -1,0 +1,30 @@
+# 开发机 ~/.bazelrc 片段。__JUMP__ 换成中转机地址。
+# 用法: bazel build --config=remote //...
+
+build:remote --remote_executor=grpc://__JUMP__:50051
+build:remote --remote_cache=grpc://__JUMP__:50052
+build:remote --remote_instance_name=main
+build:remote --remote_timeout=3600
+# 只下载顶层产物，中间 .o/.a 留在 CAS —— 三层拓扑下回程流量砍一个数量级
+build:remote --remote_download_toplevel
+# 远端任务默认打到 build 池（与 worker.json 的 platform_properties 对应）
+build:remote --remote_default_exec_properties=pool=build
+# 每个 action 默认声明 1 核 / 2G —— worker 容量（cpu_count=10, memory_kb=28G）
+# 靠这个才有扣减依据：每台最多 10 个并发编译、内存装箱不超 28G。
+# 重型 action（链接/大测试）在 BUILD 里按 target 覆盖，如
+#   exec_properties = {"cpu_count": "4", "memory_kb": "16777216"}
+# 注意：将来若定义带 exec_properties 的自定义 platform，这些默认值会被整体
+# 忽略（不合并），届时要挪进 platform 定义。
+build:remote --remote_default_exec_properties=cpu_count=1
+build:remote --remote_default_exec_properties=memory_kb=2097152
+build:remote --jobs=64
+
+# 可选：远端排队/挂掉时本地兜底
+build:remote --remote_local_fallback
+
+# 可选：本地+远端赛跑（要求本地工具链与 worker 严格一致，否则会污染共享缓存；
+# 不一致时务必加 --noremote_upload_local_results）
+build:dynamic --config=remote
+build:dynamic --internal_spawn_scheduler
+build:dynamic --spawn_strategy=dynamic
+build:dynamic --experimental_dynamic_slow_remote_time=3s
