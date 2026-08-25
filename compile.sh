@@ -29,10 +29,14 @@
 #   OUTPUT_USER_ROOT  bazel output user root   (default: <script dir>/bazel-root)
 #   REMOTE_CACHE  LAN bazel cache, e.g. grpc://jump:50052       (default: off)
 #   REMOTE_EXECUTOR  remote execution scheduler, e.g. grpc://jump:50051
-#                 enables local+remote DYNAMIC execution: every action races a
-#                 local run against the remote farm, fastest wins. Requires
-#                 identical gcc on all machines. See nativelink-farm/.
-#                 (default: off)
+#   EXEC_MODE     local | remote | dynamic  (default: dynamic when
+#                 REMOTE_EXECUTOR is set, local otherwise)
+#                   local   - all actions on this machine
+#                   remote  - all actions on the farm (deliverable builds)
+#                   dynamic - every action races local vs farm, fastest wins
+#                 Invariants in ALL modes: links run locally, and local results
+#                 are never uploaded to the shared cache. Requires identical
+#                 gcc (same path+version) on all machines. See nativelink-farm/.
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -88,6 +92,51 @@ else
     LOCKFILE_MODE=update
 fi
 
+# ---- execution mode: local | remote | dynamic ------------------------------
+# local   - everything on this machine (default when REMOTE_EXECUTOR unset)
+# remote  - every action on the farm (deliverable builds: uniform worker glibc
+#           determines the binaries' glibc floor)
+# dynamic - each action races local vs farm, fastest wins (daily dev builds)
+# Invariants in every mode: links always run locally (CppLink=local: linking on
+# an older-glibc worker can hit unresolvable new-glibc symbol names from
+# locally-built inputs), and locally-produced results are never published to
+# the shared remote cache (mixed-glibc pollution).
+EXEC_MODE=${EXEC_MODE:-}
+if [ -z "$EXEC_MODE" ]; then
+    [ -n "${REMOTE_EXECUTOR:-}" ] && EXEC_MODE=dynamic || EXEC_MODE=local
+fi
+case "$EXEC_MODE" in
+    local) ;;
+    remote|dynamic)
+        [ -n "${REMOTE_EXECUTOR:-}" ] || die "EXEC_MODE=$EXEC_MODE requires REMOTE_EXECUTOR (e.g. grpc://jump:50051)" ;;
+    *) die "EXEC_MODE must be local, remote or dynamic (got: $EXEC_MODE)" ;;
+esac
+
+REMOTE_RC=""
+add_rc() { REMOTE_RC="$REMOTE_RC$1"$'\n'; }
+[ -n "${REMOTE_CACHE:-}" ] && add_rc "common:local --remote_cache=$REMOTE_CACHE"
+if [ -n "${REMOTE_CACHE:-}${REMOTE_EXECUTOR:-}" ]; then
+    add_rc "common:local --noremote_upload_local_results"
+fi
+if [ "$EXEC_MODE" != "local" ]; then
+    add_rc "common:local --remote_executor=$REMOTE_EXECUTOR"
+    add_rc "common:local --remote_instance_name=main"
+    add_rc "common:local --remote_timeout=3600"
+    add_rc "common:local --remote_default_exec_properties=pool=build"
+    add_rc "common:local --remote_default_exec_properties=cpu_count=1"
+    add_rc "common:local --remote_default_exec_properties=memory_kb=2097152"
+    add_rc "common:local --jobs=${JOBS:-64}"
+    add_rc "common:local --strategy=DownloadWheel=local"
+    add_rc "common:local --strategy=CppLink=local"
+fi
+if [ "$EXEC_MODE" = "dynamic" ]; then
+    add_rc "common:local --internal_spawn_scheduler"
+    add_rc "common:local --spawn_strategy=dynamic"
+    add_rc "common:local --experimental_dynamic_slow_remote_time=3s"
+elif [ "$EXEC_MODE" = "remote" ]; then
+    add_rc "common:local --spawn_strategy=remote"
+fi
+
 # ---- .bazelrc.local: inherited by every bazel invocation, including the ----
 # ---- nested ones the tools/bazel wrapper spawns (python/poetry bootstrap) --
 cat > "$SOURCE_DIR/.bazelrc.local" <<EOF
@@ -96,19 +145,7 @@ $( [ -n "${OUTPUT_USER_ROOT:-}" ] && echo "startup --output_user_root=$OUTPUT_US
 $( [ -n "$WHEELHOUSE" ] && echo "common --repo_env=MONGO_PIP_WHEELHOUSE=$WHEELHOUSE" )
 common --repository_cache=$REPO_CACHE
 common --lockfile_mode=$LOCKFILE_MODE
-$( [ -n "${REMOTE_CACHE:-}" ] && echo "common:local --remote_cache=$REMOTE_CACHE" )
-$( [ -n "${REMOTE_EXECUTOR:-}" ] && printf '%s\n' \
-    "common:local --remote_executor=$REMOTE_EXECUTOR" \
-    "common:local --remote_instance_name=main" \
-    "common:local --remote_timeout=3600" \
-    "common:local --remote_default_exec_properties=pool=build" \
-    "common:local --remote_default_exec_properties=cpu_count=1" \
-    "common:local --remote_default_exec_properties=memory_kb=2097152" \
-    "common:local --jobs=${JOBS:-64}" \
-    "common:local --internal_spawn_scheduler" \
-    "common:local --spawn_strategy=dynamic" \
-    "common:local --experimental_dynamic_slow_remote_time=3s" \
-    "common:local --strategy=DownloadWheel=local" )
+$REMOTE_RC
 common --repo_env=no_c++_toolchain=1
 # Kill every remote endpoint (EngFlow remote exec/cache, BES telemetry).
 common --remote_executor=

@@ -8,8 +8,10 @@
 >   参数末尾追加 `--config=local`,把命令行上的 remote flag 清掉。请用
 >   `compile.sh` 的环境变量(接法已处理成 `common:local` rc 行,能存活覆盖):
 >   `REMOTE_EXECUTOR=grpc://中转机:50051 REMOTE_CACHE=grpc://中转机:50052 ./compile.sh ...`
->   即启用本地+远程动态执行(每个 action 本地/远程赛跑,快者胜),并自动把
->   DownloadWheel 钉在本地(wheelhouse 是发起机的绝对路径)。
+>   默认为 dynamic(本地/远程赛跑);`EXEC_MODE=remote` 为纯远程(交付构建用,
+>   产物 glibc 下限=worker 的统一 glibc);`EXEC_MODE=local` 纯本地。任何模式下
+>   链接都在本地执行、本地产物都不会上传共享缓存(防异构 glibc 污染),
+>   DownloadWheel 恒钉本地(wheelhouse 是发起机的绝对路径)。
 > - worker 机器环境:与发起机相同版本的 gcc14 + openssl-devel/libcurl-devel
 >   (可用离线包 Phase C 的 Rocky 9 + gcc-toolset-14 容器镜像做模板)。
 

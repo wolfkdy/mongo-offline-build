@@ -100,15 +100,18 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
 - `TARGET`      default `install-devcore` (mongod + mongos + mongo shell).
 - `REPO_CACHE`, `BAZEL_REAL` default to package paths; `OUTPUT_USER_ROOT`
   defaults to `<package>/bazel-root` (build scratch + outputs live there).
-- `REMOTE_CACHE` optional: a LAN Bazel cache (e.g. `grpc://server:9092` running
-  bazel-remote) shared between machines with identical gcc versions; the first
-  machine to compile an action populates it, others fetch instead of compiling.
-  The server binary ships in the package: on one machine run
-  `tools/bazel-remote --dir /data/bazel-cache --max_size 200 --grpc_address :9092`.
-  Machines sharing a cache MUST have identical gcc versions.
+- `REMOTE_CACHE` optional: a shared Bazel cache endpoint (the farm's CAS at
+  `grpc://jump:50052`, or a standalone `tools/bazel-remote` server). In EVERY
+  mode, locally-produced results are never uploaded to it (prevents mixed-glibc
+  pollution); the cache is populated by the farm's remote executions.
+- `EXEC_MODE` optional: `local` (default) | `remote` | `dynamic` (default when
+  `REMOTE_EXECUTOR` is set). `remote` runs every action on the farm - use for
+  deliverable builds (binary glibc floor = the workers' uniform glibc);
+  `dynamic` races each action local-vs-farm, fastest wins - use for daily
+  builds. In every mode links run locally (`CppLink=local`: linking on an
+  older-glibc worker can fail on newer-glibc symbol names from local inputs).
 - `REMOTE_EXECUTOR` optional: remote-execution scheduler (e.g. `grpc://jump:50051`);
-  enables local+remote DYNAMIC execution — each action races locally against the
-  farm, fastest wins, so builds never get slower than local-only. Deploy the farm
+  see `EXEC_MODE` for how actions are scheduled. Deploy the farm
   with `nativelink-farm/` (in this repo; binary ships as `tools/nativelink`);
   same identical-gcc rule applies to all workers — and stricter: the gcc
   INSTALL PATH must be identical across machines too. Set `REMOTE_CACHE`
