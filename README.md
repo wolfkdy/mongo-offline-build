@@ -262,6 +262,7 @@ python3 -m venv ~/mongo-pyenv          # optional but recommended
 | 11 | `Failed to install python deps [...]` / pip `Name or service not known` | The wheelhouse isn't reaching pip. Verify `cache/wheelhouse/` exists next to compile.sh (or set `WHEELHOUSE=<abs path>`) and that you're using the provided compile.sh; a version that pip rejects means the wheelhouse file's hash doesn't match `poetry.lock` — restore the shipped wheelhouse contents. |
 | 12 | `no such package 'src/mongo/.../.auto_header'` at analysis | The auto-header generator ran without ripgrep. Ensure `tools/rg` and `tools/fd` are present and executable (compile.sh exports `RG_PATH`/`FD_PATH`), then rerun. |
 | 13 | `ldd` shows `libatomic.so.1 => not found` | Built from a tree with an older patch: the current mongo-8.3.8-offline.patch links libatomic statically (`-l:libatomic.a` in src/mongo/db/BUILD.bazel). Re-apply the current patch and rerun compile.sh (relink-only, fast). Quick unblock without relinking: `yum install -y libatomic`. |
+| 14 | Remote/dynamic build: an action fails with `GLIBC_x.xx not found, required by ...` (e.g. `_rust.abi3.so` in CertificateGenerator) | The action RUNS a binary needing newer glibc than the worker it landed on. compile.sh already pins CppLink/DownloadWheel/CertificateGenerator local; for a new offender, find the action mnemonic in the error line and add `--strategy=<Mnemonic>=local` as an extra compile.sh argument (also report it so it gets pinned by default). |
 
 ## Rebuilding this package (networked machine)
 

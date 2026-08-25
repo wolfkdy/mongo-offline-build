@@ -150,6 +150,9 @@ if [ "$EXEC_MODE" != "local" ]; then
     add_rc "common:local --jobs=${JOBS:-64}"
     add_rc "common:local --strategy=DownloadWheel=local"
     add_rc "common:local --strategy=CppLink=local"
+    # Runs hermetic python + the cryptography wheel (_rust.abi3.so, needs
+    # glibc >= 2.28): must not land on older-glibc workers.
+    add_rc "common:local --strategy=CertificateGenerator=local"
 fi
 if [ "$EXEC_MODE" = "dynamic" ]; then
     add_rc "common:local --internal_spawn_scheduler"
