@@ -27,12 +27,11 @@
 #   STATIC_CXX_RUNTIME 1 = link libstdc++/libgcc statically (default: 1)
 #   JOBS          bazel --jobs                 (default: bazel decides)
 #   OUTPUT_USER_ROOT  bazel output user root   (default: <script dir>/bazel-root)
-#   BINUTILS_DIR  directory containing as/ld (binutils >= 2.35) that gcc should
-#                 use instead of each host's system binutils (passed via -B).
-#                 Needed when workers' system binutils is too old for e.g. the
-#                 'unique' section flag in tcmalloc's rseq assembly. Must be at
-#                 the SAME path on every machine in remote/dynamic modes.
-#                 (default: off - gcc finds as/ld normally)
+#   BINUTILS_DIR  directory containing as/ld (binutils >= 2.35) for gcc to use
+#                 via -B instead of each host's system binutils. AUTO-DETECTED:
+#                 as/ld placed at the SYSROOT root are picked up automatically;
+#                 set this only for a separate location.
+#                 (default: $SYSROOT if $SYSROOT/as exists, else off)
 #   SYSROOT       path to a sysroot tree (usr/include with glibc/openssl/curl
 #                 headers, usr/lib64 with link stubs). All compiles and links
 #                 use it instead of the host's /usr, making builds independent
@@ -85,12 +84,6 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 GCC_MAJOR=$("$CC" -dumpversion | cut -d. -f1)
 [ "$GCC_MAJOR" -ge 14 ] 2>/dev/null || die "gcc >= 14 required, found $("$CC" --version | head -1)"
 
-BINUTILS_DIR=${BINUTILS_DIR:-}
-if [ -n "$BINUTILS_DIR" ]; then
-    [ -x "$BINUTILS_DIR/as" ] || die "BINUTILS_DIR invalid: $BINUTILS_DIR/as not found"
-    BINUTILS_DIR=$(cd "$BINUTILS_DIR" && pwd)
-fi
-
 SYSROOT=${SYSROOT:-}
 if [ -n "$SYSROOT" ]; then
     [ -d "$SYSROOT/usr/include" ] || die "SYSROOT invalid: $SYSROOT/usr/include not found"
@@ -98,6 +91,17 @@ if [ -n "$SYSROOT" ]; then
     HDR_ROOT=$SYSROOT
 else
     HDR_ROOT=""
+fi
+
+# binutils: auto-detected at the sysroot root (as/ld placed there travel with
+# the sysroot); BINUTILS_DIR only needs setting for a separate location.
+BINUTILS_DIR=${BINUTILS_DIR:-}
+if [ -z "$BINUTILS_DIR" ] && [ -n "$SYSROOT" ] && [ -x "$SYSROOT/as" ]; then
+    BINUTILS_DIR=$SYSROOT
+fi
+if [ -n "$BINUTILS_DIR" ]; then
+    [ -x "$BINUTILS_DIR/as" ] || die "BINUTILS_DIR invalid: $BINUTILS_DIR/as not found"
+    BINUTILS_DIR=$(cd "$BINUTILS_DIR" && pwd)
 fi
 [ -f "$HDR_ROOT/usr/include/openssl/ssl.h" ] \
     || die "missing header openssl/ssl.h under ${HDR_ROOT:-}/usr/include (install openssl-devel or fix SYSROOT)"

@@ -105,9 +105,10 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
   mode, locally-produced results are never uploaded to it (prevents mixed-glibc
   pollution); the cache is populated by the farm's remote executions.
 - `BINUTILS_DIR` optional: directory with `as`/`ld` (binutils >= 2.35) for gcc
-  to use via `-B`, overriding each host's system binutils. Needed when a
-  worker's assembler is too old (e.g. `junk at end of line` on the `unique`
-  section flag in tcmalloc's rseq assembly). Same-path-everywhere rule applies.
+  to use via `-B`, overriding each host's system binutils (needed when a
+  worker's assembler is too old, e.g. `junk at end of line` on tcmalloc's rseq
+  assembly). AUTO-DETECTED when `as` sits at the `SYSROOT` root - ship binutils
+  inside the sysroot tree and this needs no setting.
 - `SYSROOT` optional: path to a sysroot tree (glibc + kernel + openssl + curl
   headers in `usr/include`, link stubs in `usr/lib64`). All compiles and links
   then use it instead of each host's `/usr`, making builds independent of the

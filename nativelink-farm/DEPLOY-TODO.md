@@ -17,7 +17,8 @@
       libcurl-devel、binutils、libatomic。
       **binutils 必须 ≥2.35** 且全网一致(tcmalloc 的 rseq 汇编用到 2.35 的
       `unique` 段标志);老机器升不动系统包时,把新 binutils 的 `as`/`ld`
-      放到全网统一目录,构建时传 `BINUTILS_DIR=<目录>`。
+      直接放在 sysroot 根目录随 sysroot 一起分发(compile.sh 自动识别,
+      无需传参);放别处才需要 `BINUTILS_DIR=<目录>`。
       验证:任选发起机与 worker 各跑 `<路径>/bin/g++ --version` 输出一致;
       `echo '.section .tdata,"awT",@progbits,unique,1' | <as> - -o /dev/null`
       无报错。
