@@ -1,4 +1,7 @@
 // 中转机: scheduler + worker_api。schema 已用 nativelink v1.6.6 实测通过。__CAS__ 换成 cas 机地址。
+// 50051 同时暴露 cas/ac/bytestream(经 PROXY 转发到 cas 机): Bazel 在只配
+// --remote_executor 时会用 executor 通道做 CAS 调用(FindMissingBlobs 等),
+// 缺这些服务会 404。正式使用仍建议配 --remote_cache=50052 走 socat 分流大流量。
 // 注意: v1.6.6 已移除 experimental_prometheus 拉取端点, 指标只能 OTLP 推送
 // (队列深度指标为 nativelink_execution_active_count{execution_stage="queued"}), 见 DEPLOY-TODO 指标项。
 {
@@ -64,6 +67,24 @@
             "remote_execution": {
               "scheduler": "MAIN_SCHEDULER"
             }
+          }
+        ],
+        "cas": [
+          {
+            "instance_name": "main",
+            "cas_store": "CAS_PROXY"
+          }
+        ],
+        "ac": [
+          {
+            "instance_name": "main",
+            "ac_store": "AC_PROXY"
+          }
+        ],
+        "bytestream": [
+          {
+            "instance_name": "main",
+            "cas_store": "CAS_PROXY"
           }
         ]
       }

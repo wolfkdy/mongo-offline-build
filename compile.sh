@@ -132,13 +132,11 @@ fi
 NOCACHE=${NOCACHE:-0}
 REMOTE_RC=""
 add_rc() { REMOTE_RC="$REMOTE_RC$1"$'\n'; }
-if [ "$NOCACHE" = "1" ]; then
-    # No cache reads: covers both a configured --remote_cache and the
-    # executor channel's implicit action-cache lookups in remote/dynamic.
-    add_rc "common:local --noremote_accept_cached"
-else
-    [ -n "${REMOTE_CACHE:-}" ] && add_rc "common:local --remote_cache=$REMOTE_CACHE"
-fi
+# The cache endpoint stays configured even with NOCACHE=1: it is the CAS
+# byte-transfer channel (FindMissingBlobs/ByteStream), which remote execution
+# needs regardless. NOCACHE only skips action-cache HITS.
+[ -n "${REMOTE_CACHE:-}" ] && add_rc "common:local --remote_cache=$REMOTE_CACHE"
+[ "$NOCACHE" = "1" ] && add_rc "common:local --noremote_accept_cached"
 if [ -n "${REMOTE_CACHE:-}${REMOTE_EXECUTOR:-}" ]; then
     add_rc "common:local --noremote_upload_local_results"
     # mongo's .bazelrc "disables" keepalive with --grpc_keepalive_time=0s under
