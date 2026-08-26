@@ -95,7 +95,6 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr JOBS=4 ./compile.sh
 `compile.sh` knobs (env vars):
 - `SOURCE_DIR`  REQUIRED: the patched mongo checkout from the step above.
 - `GCC_PREFIX`  gcc install prefix (default `/usr`); or set `CC`/`CXX`/`AR` directly.
-- `OFFLINE=1`   enforce strict offline mode (`--lockfile_mode=error`). Use it.
 - `JOBS`        concurrency; see RAM rule above. Omit on big machines.
 - `TARGET`      default `install-devcore` (mongod + mongos + mongo shell).
 - `REPO_CACHE`, `BAZEL_REAL` default to package paths; `OUTPUT_USER_ROOT`

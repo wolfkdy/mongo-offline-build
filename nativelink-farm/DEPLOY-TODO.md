@@ -61,7 +61,7 @@
 
 - [ ] 最小拓扑(scheduler + cas + 1 worker)上跑一次真实 mongo 构建:
       `REMOTE_EXECUTOR=grpc://中转机:50051 REMOTE_CACHE=grpc://中转机:50052 \
-       SOURCE_DIR=... GCC_PREFIX=... OFFLINE=1 ./compile.sh`
+       SOURCE_DIR=... GCC_PREFIX=... ./compile.sh`
       验证:构建结束的 `INFO: ... processes:` 统计行里 **remote 计数 > 0**
       (动态执行生效,部分 action 由远端胜出);全程无网络外联报错;
       产物按仓库根 README「Verify the result」三步验收。
