@@ -141,10 +141,13 @@ if [ "$EXEC_MODE" != "local" ]; then
 fi
 if [ "$EXEC_MODE" = "dynamic" ]; then
     add_rc "common:local --internal_spawn_scheduler"
-    add_rc "common:local --spawn_strategy=dynamic"
+    # sandboxed,local fallbacks: actions that self-declare no-remote/local
+    # (e.g. MongoInstallRule) cannot use dynamic and need somewhere to land.
+    add_rc "common:local --spawn_strategy=dynamic,sandboxed,local"
     add_rc "common:local --experimental_dynamic_slow_remote_time=3s"
 elif [ "$EXEC_MODE" = "remote" ]; then
-    add_rc "common:local --spawn_strategy=remote"
+    # sandboxed,local fallbacks for no-remote-tagged actions (MongoInstallRule etc.)
+    add_rc "common:local --spawn_strategy=remote,sandboxed,local"
 fi
 
 # ---- .bazelrc.local: inherited by every bazel invocation, including the ----
