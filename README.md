@@ -114,7 +114,8 @@ SOURCE_DIR=/path/to/your/mongo JOBS=4 ./compile.sh
   `REMOTE_EXECUTOR` is set). `remote` runs every action on the farm - use for
   deliverable builds (binary glibc floor = the workers' uniform glibc);
   `dynamic` races each action local-vs-farm, fastest wins - use for daily
-  builds. In every mode links run locally (`CppLink=local`: linking on an
+  builds (local race lane defaults to nproc/2+2 concurrent actions; override
+  with an extra `--local_cpu_resources=<n>` argument). In every mode links run locally (`CppLink=local`: linking on an
   older-glibc worker can fail on newer-glibc symbol names from local inputs).
 - `REMOTE_EXECUTOR` optional: remote-execution scheduler (e.g. `grpc://jump:50051`);
   see `EXEC_MODE` for how actions are scheduled. Deploy the farm

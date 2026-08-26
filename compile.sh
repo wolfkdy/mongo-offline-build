@@ -308,7 +308,13 @@ done
 
 # The wrapper hook appends its own --config=local, whose expansion overrides
 # an explicit --jobs; --local_cpu_resources limits concurrency reliably.
-[ -n "${JOBS:-}" ] && BAZEL_ARGS+=("--jobs=$JOBS" "--local_cpu_resources=$JOBS")
+[ -n "${JOBS:-}" ] && BAZEL_ARGS+=("--jobs=$JOBS")
+# JOBS doubles as the local concurrency cap in LOCAL mode only (OOM guard).
+[ "$EXEC_MODE" = "local" ] && [ -n "${JOBS:-}" ] && BAZEL_ARGS+=("--local_cpu_resources=$JOBS")
+# Dynamic mode: keep the local race lane at nproc/2+2 so the farm carries the
+# bulk while the client stays responsive. Override by passing
+# --local_cpu_resources=<n> as an extra argument.
+[ "$EXEC_MODE" = "dynamic" ] && BAZEL_ARGS+=("--local_cpu_resources=$(( $(nproc) / 2 + 2 ))")
 
 # Farm resource declarations: on the command line, NOT in common:local rc lines
 # (see the note in the rc-generation block above).
