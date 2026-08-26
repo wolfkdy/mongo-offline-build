@@ -104,18 +104,6 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
   `grpc://jump:50052`, or a standalone `tools/bazel-remote` server). In EVERY
   mode, locally-produced results are never uploaded to it (prevents mixed-glibc
   pollution); the cache is populated by the farm's remote executions.
-- `BINUTILS_DIR` optional: directory with `as`/`ld` (binutils >= 2.35) for gcc
-  to use via `-B`, overriding each host's system binutils (needed when a
-  worker's assembler is too old, e.g. `junk at end of line` on tcmalloc's rseq
-  assembly). AUTO-DETECTED when `as` sits at the `SYSROOT` root - ship binutils
-  inside the sysroot tree and this needs no setting.
-- `SYSROOT` optional: path to a sysroot tree (glibc + kernel + openssl + curl
-  headers in `usr/include`, link stubs in `usr/lib64`). All compiles and links
-  then use it instead of each host's `/usr`, making builds independent of the
-  machines' glibc/openssl age and pinning the binaries' glibc floor to the
-  sysroot's version. Must be at the SAME path on every machine in remote or
-  dynamic modes; toggling it triggers a full rebuild. Build the sysroot from
-  your oldest deployment-baseline machine (see nativelink-farm/DEPLOY-TODO.md).
 - `EXEC_MODE` optional: `local` (default) | `remote` | `dynamic` (default when
   `REMOTE_EXECUTOR` is set). `remote` runs every action on the farm - use for
   deliverable builds (binary glibc floor = the workers' uniform glibc);
@@ -268,7 +256,6 @@ python3 -m venv ~/mongo-pyenv          # optional but recommended
 | 12 | `no such package 'src/mongo/.../.auto_header'` at analysis | The auto-header generator ran without ripgrep. Ensure `tools/rg` and `tools/fd` are present and executable (compile.sh exports `RG_PATH`/`FD_PATH`), then rerun. |
 | 13 | `ldd` shows `libatomic.so.1 => not found` | Built from a tree with an older patch: the current mongo-8.3.8-offline.patch links libatomic statically (`-l:libatomic.a` in src/mongo/db/BUILD.bazel). Re-apply the current patch and rerun compile.sh (relink-only, fast). Quick unblock without relinking: `yum install -y libatomic`. |
 | 14 | Remote/dynamic build: an action fails with `GLIBC_x.xx not found, required by ...` (e.g. `_rust.abi3.so` in CertificateGenerator) | The action RUNS a binary needing newer glibc than the worker it landed on. compile.sh already pins CppLink/DownloadWheel/CertificateGenerator local; for a new offender, find the action mnemonic in the error line and add `--strategy=<Mnemonic>=local` as an extra compile.sh argument (also report it so it gets pinned by default). |
-| 15 | Remote build: `percpu_rseq_asm.S: junk at end of line, first unrecognized character is ','` | The worker's system binutils is older than 2.35 (the `unique` section flag). Distribute binutils >= 2.35 to a uniform path on all machines and set `BINUTILS_DIR=<path>`. |
 
 ## Rebuilding this package (networked machine)
 

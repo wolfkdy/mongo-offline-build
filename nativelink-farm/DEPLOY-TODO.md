@@ -15,17 +15,9 @@
       内嵌的是发起机 gcc 的**绝对路径**。所有发起机 + worker 必须在**同一路径**
       装**同一版本** gcc14(建议系统包管理装到 `/usr`),外加 openssl-devel、
       libcurl-devel、binutils、libatomic。
-      **binutils 必须 ≥2.35** 且全网一致(tcmalloc 的 rseq 汇编用到 2.35 的
-      `unique` 段标志);老机器升不动系统包时,在**最老的机器上编译一份** binutils
-      (产物 glibc 下限=最老机器,全网可跑;勿直接拷新发行版的二进制,
-      其解释器/libc 依赖在老机器上起不来):
-      `./configure --prefix=/tmp/bt --disable-gdb --disable-werror && make -j && make install`
-      (加 `LDFLAGS=-static` 可得全静态产物,任何机器免疫 glibc 差异)。
-      把 `as`/`ld` 放在 sysroot 根目录随 sysroot 一起分发,compile.sh
-      自动识别、无需传参;放别处才需要 `BINUTILS_DIR=<目录>`。
-      验证:任选发起机与 worker 各跑 `<路径>/bin/g++ --version` 输出一致;
-      `echo '.section .tdata,"awT",@progbits,unique,1' | <as> - -o /dev/null`
-      无报错。
+      推荐直接用**统一的 worker 容器镜像**承载编译环境(可拿离线包验证用的
+      Rocky 9 + gcc-toolset-14 镜像做模板):gcc、binutils、glibc、openssl/curl
+      头文件天然全网一致,上面的一致性要求整体满足。
 - [ ] **ssh 免密**:中转机(控制器)→ 每台 worker 机 root 免密
       (`ssh -o BatchMode=yes root@<worker> true` 返回 0)。
 - [ ] **端口放行**:开发机→中转机 50051/50052;worker→中转机 50061;
