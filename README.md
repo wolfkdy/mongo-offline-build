@@ -54,6 +54,10 @@ mongo-offline-build/
 The patch path in the build steps below is `mongo-8.3.8-offline.patch` at this
 directory's root.
 
+> **Worked examples** for every usage scenario (local/remote/dynamic modes,
+> shared cache, resmoke, incremental rebuilds, debugging flags):
+> **[EXAMPLES.md](EXAMPLES.md)**.
+
 ## Prerequisites on the offline machine
 
 - x86_64 Linux, glibc >= 2.25 (verified against glibc 2.34 targets)
