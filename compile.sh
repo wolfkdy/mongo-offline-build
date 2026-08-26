@@ -22,7 +22,6 @@
 #   REPO_CACHE    bazel repository cache dir   (default: <script dir>/cache/repo_cache)
 #   TARGET        bazel target to build        (default: install-devcore)
 #   MONGO_VERSION version to stamp             (default: 8.3.8)
-#   OFFLINE       1 = enforce fully-offline behavior (lockfile_mode=error) (default: 0)
 #   MARCH         -march value                 (default: sandybridge, mongo's own default)
 #   STATIC_CXX_RUNTIME 1 = link libstdc++/libgcc statically (default: 1)
 #   JOBS          bazel --jobs                 (default: bazel decides)
@@ -53,7 +52,7 @@ BAZEL_REAL=${BAZEL_REAL:-$SCRIPT_DIR/tools/bazel-7.5.0-mongo_06d753863d-linux-x8
 REPO_CACHE=${REPO_CACHE:-$SCRIPT_DIR/cache/repo_cache}
 TARGET=${TARGET:-install-devcore}
 MONGO_VERSION=${MONGO_VERSION:-8.3.8}
-OFFLINE=${OFFLINE:-0}
+OFFLINE=${OFFLINE:-1}
 MARCH=${MARCH:-sandybridge}
 STATIC_CXX_RUNTIME=${STATIC_CXX_RUNTIME:-1}
 

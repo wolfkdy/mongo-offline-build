@@ -51,6 +51,7 @@ python3 -m pip wheel --no-deps --wheel-dir "$PACK_DIR/python-wheels" timeout-dec
 # 3. Full build with empty cache + fresh output root -> populates the cache.
 rm -rf "$PACK_DIR/bazel-root-prefetch"
 SOURCE_DIR="$MONGO_GIT_DIR" \
+OFFLINE=0 \
 GCC_PREFIX="$GCC_PREFIX" \
 REPO_CACHE="$PACK_DIR/cache/repo_cache" \
 OUTPUT_USER_ROOT="$PACK_DIR/bazel-root-prefetch" \

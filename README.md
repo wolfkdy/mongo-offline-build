@@ -89,7 +89,7 @@ cd /path/to/mongo-8.3.8-offline-build
 
 # gcc prefix: wherever gcc14 lives. For a normal system install use /usr.
 # For a gcc-toolset/SCL or custom prefix, point at that prefix.
-SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
+SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr JOBS=4 ./compile.sh
 ```
 
 `compile.sh` knobs (env vars):
@@ -248,7 +248,7 @@ python3 -m venv ~/mongo-pyenv          # optional but recommended
 | 1 | `missing system header openssl/ssl.h` / `curl/curl.h` at script start | Install `openssl-devel` / `libcurl-devel` (headers, not just libs). |
 | 2 | `gcc >= 14 required` | Point `GCC_PREFIX` (or `CC`/`CXX`/`AR`) at the gcc14 installation, e.g. a gcc-toolset prefix like `/opt/rh/gcc-toolset-14/root/usr`. |
 | 3 | `gcc: fatal error: Killed signal terminated program cc1plus` mid-build | OOM. Lower `JOBS` (RAM/3 rule) and/or add swap, then rerun the same command — completed work is cached, it resumes where it stopped. |
-| 4 | Bazel tries to reach the network / `lockfile ... error` | Ensure `OFFLINE=1` and that `cache/repo_cache` is intact. Any sha256-mismatched or missing cache entry names the URL it wanted — check the package copy wasn't truncated. |
+| 4 | Bazel tries to reach the network / `lockfile ... error` | Check that `cache/repo_cache` is intact and the source patch matches this package's `MODULE.bazel.lock`. Any sha256-mismatched or missing cache entry names the URL it wanted — check the package copy wasn't truncated. |
 | 5 | `absl/hash/hash.h: No such file` style errors | `--features=external_include_paths` missing — you are not using the provided `compile.sh`; use it (it passes the flag). |
 | 6 | Binary fails `ldd` static check or `GLIBCXX_...' not found` when running tools | The gcc in use lacks `libstdc++.a` (install its static-libstdc++ package, e.g. `libstdc++-static` on RHEL-family) — then rerun. |
 | 7 | Log shows `[Sched] Linking ...` with huge timer | The link is queued waiting for free slots/RAM, not stuck. The non-TTY log only prints the oldest in-flight action; check real activity with `ps aux | grep -E 'cc1plus|ld'`. |
