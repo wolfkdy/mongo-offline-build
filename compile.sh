@@ -28,6 +28,9 @@
 #   JOBS          bazel --jobs                 (default: bazel decides)
 #   OUTPUT_USER_ROOT  bazel output user root   (default: <script dir>/bazel-root)
 #   REMOTE_CACHE  LAN bazel cache, e.g. grpc://jump:50052       (default: off)
+#   NOCACHE       1 = do not read from the shared cache at all (writes are
+#                 already always off). Useful to force a real rebuild or to
+#                 debug suspected cache issues.               (default: 0)
 #   REMOTE_EXECUTOR  remote execution scheduler, e.g. grpc://jump:50051
 #   EXEC_MODE     local | remote | dynamic  (default: dynamic when
 #                 REMOTE_EXECUTOR is set, local otherwise)
@@ -112,9 +115,16 @@ case "$EXEC_MODE" in
     *) die "EXEC_MODE must be local, remote or dynamic (got: $EXEC_MODE)" ;;
 esac
 
+NOCACHE=${NOCACHE:-0}
 REMOTE_RC=""
 add_rc() { REMOTE_RC="$REMOTE_RC$1"$'\n'; }
-[ -n "${REMOTE_CACHE:-}" ] && add_rc "common:local --remote_cache=$REMOTE_CACHE"
+if [ "$NOCACHE" = "1" ]; then
+    # No cache reads: covers both a configured --remote_cache and the
+    # executor channel's implicit action-cache lookups in remote/dynamic.
+    add_rc "common:local --noremote_accept_cached"
+else
+    [ -n "${REMOTE_CACHE:-}" ] && add_rc "common:local --remote_cache=$REMOTE_CACHE"
+fi
 if [ -n "${REMOTE_CACHE:-}${REMOTE_EXECUTOR:-}" ]; then
     add_rc "common:local --noremote_upload_local_results"
     # mongo's .bazelrc "disables" keepalive with --grpc_keepalive_time=0s under

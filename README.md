@@ -104,6 +104,9 @@ SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr OFFLINE=1 JOBS=4 ./compile.sh
   `grpc://jump:50052`, or a standalone `tools/bazel-remote` server). In EVERY
   mode, locally-produced results are never uploaded to it (prevents mixed-glibc
   pollution); the cache is populated by the farm's remote executions.
+- `NOCACHE=1` optional: do not READ from the shared cache (writes are always
+  off for local results). Forces genuinely fresh execution - useful when
+  debugging suspected cache issues or timing a true cold build.
 - `EXEC_MODE` optional: `local` (default) | `remote` | `dynamic` (default when
   `REMOTE_EXECUTOR` is set). `remote` runs every action on the farm - use for
   deliverable builds (binary glibc floor = the workers' uniform glibc);
