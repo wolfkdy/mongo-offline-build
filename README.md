@@ -87,14 +87,18 @@ Then build:
 ```bash
 cd /path/to/mongo-8.3.8-offline-build
 
-# gcc prefix: wherever gcc14 lives. For a normal system install use /usr.
-# For a gcc-toolset/SCL or custom prefix, point at that prefix.
-SOURCE_DIR=/path/to/your/mongo GCC_PREFIX=/usr JOBS=4 ./compile.sh
+# gcc is found at the canonical path /data/gcc-14.3.0 - one-time setup per
+# machine: ln -s <your real gcc14 prefix> /data/gcc-14.3.0
+SOURCE_DIR=/path/to/your/mongo JOBS=4 ./compile.sh
 ```
 
 `compile.sh` knobs (env vars):
 - `SOURCE_DIR`  REQUIRED: the patched mongo checkout from the step above.
-- `GCC_PREFIX`  gcc install prefix (default `/usr`); or set `CC`/`CXX`/`AR` directly.
+- `GCC_PREFIX`  gcc install prefix (default: the canonical `/data/gcc-14.3.0`
+  symlink). Overridable in LOCAL mode only - remote/dynamic modes reject it,
+  because action command lines embed the compiler's absolute path and run
+  byte-identically on workers (and key the shared cache): every machine must
+  resolve the same canonical path via its own symlink.
 - `JOBS`        concurrency; see RAM rule above. Omit on big machines.
 - `TARGET`      default `install-devcore` (mongod + mongos + mongo shell).
 - `REPO_CACHE`, `BAZEL_REAL` default to package paths; `OUTPUT_USER_ROOT`

@@ -16,7 +16,10 @@
 #
 # Environment overrides (all optional):
 #   SOURCE_DIR    REQUIRED: your mongo r8.3.8 checkout with the offline patch applied
-#   GCC_PREFIX    gcc install prefix           (default: /usr)
+#   GCC_PREFIX    gcc install prefix     (default: /data/gcc-14.3.0, the
+#                 fleet-wide canonical path - each machine symlinks it to its
+#                 real gcc. Overridable in local mode only; remote/dynamic
+#                 modes REQUIRE the canonical path, see error text)
 #   CC, CXX, AR   explicit compiler paths      (default: $GCC_PREFIX/bin/{gcc,g++,gcc-ar})
 #   BAZEL_REAL    mongo-forked bazel binary    (default: <script dir>/tools/bazel-7.5.0-...)
 #   REPO_CACHE    bazel repository cache dir   (default: <script dir>/cache/repo_cache)
@@ -47,7 +50,8 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 SOURCE_DIR=${SOURCE_DIR:-}
 [ -n "$SOURCE_DIR" ] || { echo "ERROR: set SOURCE_DIR to your mongo r8.3.8 checkout (with the offline patch applied)" >&2; exit 1; }
 OUTPUT_USER_ROOT=${OUTPUT_USER_ROOT:-$SCRIPT_DIR/bazel-root}
-GCC_PREFIX=${GCC_PREFIX:-/usr}
+GCC_PREFIX_USER_SET=${GCC_PREFIX:+yes}
+GCC_PREFIX=${GCC_PREFIX:-/data/gcc-14.3.0}
 BAZEL_REAL=${BAZEL_REAL:-$SCRIPT_DIR/tools/bazel-7.5.0-mongo_06d753863d-linux-x86_64}
 REPO_CACHE=${REPO_CACHE:-$SCRIPT_DIR/cache/repo_cache}
 TARGET=${TARGET:-install-devcore}
@@ -66,7 +70,7 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 [ -d "$SOURCE_DIR" ] || die "SOURCE_DIR not found: $SOURCE_DIR"
 [ -f "$SOURCE_DIR/tools/bazel" ] || die "$SOURCE_DIR does not look like a mongo source tree (tools/bazel missing)"
 [ -x "$BAZEL_REAL" ] || die "bazel binary not found/executable: $BAZEL_REAL"
-[ -x "$CC" ] || die "C compiler not found: $CC (set GCC_PREFIX or CC)"
+[ -x "$CC" ] || die "C compiler not found: $CC (local mode: set GCC_PREFIX/CC; remote/dynamic mode: create the canonical symlink, e.g. ln -s <your gcc prefix> /data/gcc-14.3.0)"
 [ -x "$CXX" ] || die "C++ compiler not found: $CXX"
 [ -x "$AR" ] || { AR=$GCC_PREFIX/bin/ar; [ -x "$AR" ] || AR=/usr/bin/ar; }
 [ -x "$AR" ] || die "ar not found; install binutils or set AR"
@@ -113,6 +117,17 @@ case "$EXEC_MODE" in
         [ -n "${REMOTE_EXECUTOR:-}" ] || die "EXEC_MODE=$EXEC_MODE requires REMOTE_EXECUTOR (e.g. grpc://jump:50051)" ;;
     *) die "EXEC_MODE must be local, remote or dynamic (got: $EXEC_MODE)" ;;
 esac
+
+if [ "$EXEC_MODE" != "local" ] && [ -n "$GCC_PREFIX_USER_SET" ]; then
+    die "GCC_PREFIX must NOT be set in $EXEC_MODE mode.
+Reason: a Bazel action's command line embeds the compiler's ABSOLUTE path and
+is executed byte-identically on this machine and on remote workers; it is also
+the shared-cache key. A custom path would break remote execution (the path
+does not exist on workers) and fragment the cache across machines. All
+machines therefore use one canonical path: /data/gcc-14.3.0
+Fix: symlink it to your real gcc once (ln -s <your gcc prefix> /data/gcc-14.3.0)
+and rerun without GCC_PREFIX. Overriding is allowed in pure local mode only."
+fi
 
 NOCACHE=${NOCACHE:-0}
 REMOTE_RC=""

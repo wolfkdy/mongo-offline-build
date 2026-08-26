@@ -11,10 +11,12 @@
       静态构建,无 glibc 依赖,sha256 `b29b265000bb740fe953...`)拷到每台角色机的
       `/data/nativelink/bin/nativelink`,连同 `deploy/nl.sh` → `bin/nl.sh`。
       验证:`/data/nativelink/bin/nativelink --version` 输出 `nativelink 1.6.6`。
-- [ ] **全网统一 gcc 安装路径**(动态执行的硬前提):非密封工具链下,编译命令
-      内嵌的是发起机 gcc 的**绝对路径**。所有发起机 + worker 必须在**同一路径**
-      装**同一版本** gcc14(建议系统包管理装到 `/usr`),外加 openssl-devel、
-      libcurl-devel、binutils、libatomic。
+- [ ] **全网统一 gcc 规范路径 `/data/gcc-14.3.0`**(动态执行的硬前提):非密封
+      工具链下,编译命令内嵌编译器**绝对路径**且全网逐字节相同。每台发起机与
+      worker(镜像内)各自一次性建链接:
+      `ln -s <本机真实 gcc14 前缀> /data/gcc-14.3.0`
+      版本必须全网一致;另需 openssl-devel、libcurl-devel、binutils、libatomic。
+      compile.sh 默认即用该路径,remote/dynamic 模式下禁止覆盖。
       推荐直接用**统一的 worker 容器镜像**承载编译环境(可拿离线包验证用的
       Rocky 9 + gcc-toolset-14 镜像做模板):gcc、binutils、glibc、openssl/curl
       头文件天然全网一致,上面的一致性要求整体满足。
