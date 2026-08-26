@@ -27,12 +27,23 @@
 
 ## B. 模板核对(配置按文档写成,未对过真实版本)
 
-- [ ] **验证 `deploy/*.json` schema**:每台角色机上直接跑
-      `/data/nativelink/bin/nativelink /data/nativelink/etc/<role>.json`,
-      看是否报配置解析错误;字段名随版本演进,报错就按 v1.6.6 文档改。
-- [ ] **核对队列指标名**:scheduler 起来后
-      `curl -s http://中转机:50061/metrics | grep -i queue`,
-      把真实指标名填进 `controller/config.toml` 的 `queue_metric_regex`。
+- [x] ~~验证 `deploy/*.json` schema~~ **已在打包侧完成**:三个模板均用
+      nativelink v1.6.6 二进制实测通过(stores/services 已迁移到 v1.6.6 的
+      数组格式,注释为 JSON5 行注释、v1.6.6 接受)。机器上如再报解析错误,
+      多半是手工改动引入的。
+- [ ] **指标管线选型(阻塞控制器扩缩容)**:v1.6.6 已移除 Prometheus 拉取
+      端点(`experimental_prometheus` 服务不存在),指标只能 OTLP **推送**,
+      空闲时无样本、静默不发。队列深度指标名:
+      `nativelink_execution_active_count{execution_stage="queued"}`。
+      可选路线(二选一,选定后需相应修改 controller 的 fetch_queue_depth):
+      a) 中转机部署 Prometheus(开 `--web.enable-otlp-receiver`),scheduler 以
+         `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+          OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://127.0.0.1:9090/api/v1/otlp/v1/metrics`
+         启动推送;controller 改查 Prometheus HTTP API(JSON)。
+         附赠完整监控/历史/看板能力,多一个组件。
+      b) 中转机部署 OTel Collector(prometheus exporter 出口),controller 的
+         现有 /metrics 轮询逻辑不变,只改 metrics_url 指向 collector。
+         组件同样 +1,controller 零改动。
 - [ ] **验证 `minimum` 资源记账语义**:向单台 worker(cpu_count=10)提交 32 个
       并行 action(每个声明 cpu_count=1),观察并发是否稳定在 10。
       若只做过滤不做扣减,需另想并发控制(如降低 worker 上报的 cpu_count)。

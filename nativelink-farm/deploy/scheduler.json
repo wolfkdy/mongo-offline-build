@@ -1,23 +1,36 @@
+// 中转机: scheduler + worker_api。schema 已用 nativelink v1.6.6 实测通过。__CAS__ 换成 cas 机地址。
+// 注意: v1.6.6 已移除 experimental_prometheus 拉取端点, 指标只能 OTLP 推送
+// (队列深度指标为 nativelink_execution_active_count{execution_stage="queued"}), 见 DEPLOY-TODO 指标项。
 {
-  "_comment": "中转机: scheduler + worker_api + metrics。CAS 不落本地，走 grpc 代理到 cas 机(__CAS__)。模板：上线前用目标版本 nativelink 验证 schema。",
-  "stores": {
-    "CAS_PROXY": {
+  "stores": [
+    {
+      "name": "CAS_PROXY",
       "grpc": {
         "instance_name": "main",
-        "endpoints": [{ "address": "grpc://__CAS__:50052" }],
+        "endpoints": [
+          {
+            "address": "grpc://__CAS__:50052"
+          }
+        ],
         "store_type": "cas"
       }
     },
-    "AC_PROXY": {
+    {
+      "name": "AC_PROXY",
       "grpc": {
         "instance_name": "main",
-        "endpoints": [{ "address": "grpc://__CAS__:50052" }],
+        "endpoints": [
+          {
+            "address": "grpc://__CAS__:50052"
+          }
+        ],
         "store_type": "ac"
       }
     }
-  },
-  "schedulers": {
-    "MAIN_SCHEDULER": {
+  ],
+  "schedulers": [
+    {
+      "name": "MAIN_SCHEDULER",
       "simple": {
         "supported_platform_properties": {
           "OSFamily": "exact",
@@ -29,27 +42,46 @@
         }
       }
     }
-  },
+  ],
   "servers": [
     {
-      "_comment": "面向开发机 Bazel 的入口 (--remote_executor)",
-      "listener": { "http": { "socket_address": "0.0.0.0:50051" } },
-      "services": {
-        "execution": {
-          "main": { "cas_store": "CAS_PROXY", "scheduler": "MAIN_SCHEDULER" }
-        },
-        "capabilities": {
-          "main": { "remote_execution": { "scheduler": "MAIN_SCHEDULER" } }
+      "listener": {
+        "http": {
+          "socket_address": "0.0.0.0:50051"
         }
+      },
+      "services": {
+        "execution": [
+          {
+            "instance_name": "main",
+            "cas_store": "CAS_PROXY",
+            "scheduler": "MAIN_SCHEDULER"
+          }
+        ],
+        "capabilities": [
+          {
+            "instance_name": "main",
+            "remote_execution": {
+              "scheduler": "MAIN_SCHEDULER"
+            }
+          }
+        ]
       }
     },
     {
-      "_comment": "面向 worker 注册 + 控制器抓指标",
-      "listener": { "http": { "socket_address": "0.0.0.0:50061" } },
+      "listener": {
+        "http": {
+          "socket_address": "0.0.0.0:50061"
+        }
+      },
       "services": {
-        "worker_api": { "scheduler": "MAIN_SCHEDULER" },
-        "experimental_prometheus": { "path": "/metrics" },
-        "health": {}
+        "worker_api": {
+          "scheduler": "MAIN_SCHEDULER"
+        },
+        "health": {},
+        "admin": {
+          "path": "/admin"
+        }
       }
     }
   ]
