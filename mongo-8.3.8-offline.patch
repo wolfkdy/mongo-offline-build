@@ -128,19 +128,40 @@ index e0f156e5e9c..983eb1ab430 100644
  
  def write_wrapper_hook_bazelrc(args):
 diff --git a/buildscripts/resmokelib/configure_resmoke.py b/buildscripts/resmokelib/configure_resmoke.py
-index 5f51297d17a..4e28009899d 100644
+index 5f51297d17a..fb256884e6d 100644
 --- a/buildscripts/resmokelib/configure_resmoke.py
 +++ b/buildscripts/resmokelib/configure_resmoke.py
-@@ -359,6 +359,9 @@ def _find_resmoke_wrappers():
+@@ -357,6 +357,17 @@ def _find_resmoke_wrappers():
+     return list(candidate_installs)
  
+ 
++def _otel_export_disabled() -> bool:
++    """Check whether the user opted out of exporting traces to the OTel collector.
++
++    Offline/air-gapped environments cannot reach the collector. Setting
++    RESMOKE_SKIP_OTEL_EXPORT=1 keeps the local file exporter but never creates the
++    network (gRPC) exporter. Values "0" and "false" are treated as unset.
++    """
++    value = os.environ.get("RESMOKE_SKIP_OTEL_EXPORT", "")
++    return value.strip().lower() not in ("", "0", "false")
++
++
  def _should_skip_grpc_tracing():
      """Check whether grpc tracing is enabled on the current machine's OS."""
-+    if os.environ.get("RESMOKE_SKIP_OTEL_EXPORT"):
-+        # Offline/air-gapped environments cannot reach the OTel collector.
-+        return True
      return sys.platform.startswith("linux") and platform.machine().startswith(
-         ("ppc", "powerpc", "s390")
-     )
+@@ -410,7 +421,11 @@ def _set_up_tracing(
+             success = False
+ 
+     # If we're not running inside of Evergreen, we need to configure the endpoint to send traces directly to the ingestor.
+-    if not _config.EVERGREEN_TASK_ID and not _should_skip_grpc_tracing():
++    if (
++        not _config.EVERGREEN_TASK_ID
++        and not _otel_export_disabled()
++        and not _should_skip_grpc_tracing()
++    ):
+         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+ 
+         try:
 diff --git a/src/mongo/db/BUILD.bazel b/src/mongo/db/BUILD.bazel
 index bfc5fc3b6e6..06e3fc6b0f9 100644
 --- a/src/mongo/db/BUILD.bazel
