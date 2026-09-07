@@ -48,6 +48,7 @@ SOURCE_DIR=/path/to/mongo JOBS=4 ./compile.sh
 ```bash
 BIN=$(ls -d bazel-root/*/execroot/_main/bazel-out/k8-opt/bin/install/bin | head -1)
 $BIN/mongod --version          # 必须打印 db version v8.3.8
+$BIN/mongod --version | grep gitVersion   # 必须是 SOURCE_DIR 的 HEAD，不能是 nogitversion
 ldd $BIN/mongod | grep -E 'stdc\+\+|gcc_s|atomic' \
   && echo "FAIL: 存在动态 C++ 运行时依赖" || echo "OK: 运行时全静态"
 # 冒烟:起库、插一条、查回来、关库

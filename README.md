@@ -152,6 +152,7 @@ deployment copies if size matters.
 ```bash
 BIN=$(ls -d bazel-root/*/execroot/_main/bazel-out/k8-opt/bin/install/bin | head -1)
 $BIN/mongod --version                     # must print: db version v8.3.8
+$BIN/mongod --version | grep gitVersion   # must show SOURCE_DIR's HEAD, not "nogitversion"
 ldd $BIN/mongod | grep -E 'stdc\+\+|gcc_s' \
   && echo "FAIL: dynamic C++ runtime" || echo "OK: libstdc++ statically linked"
 # live smoke test:
@@ -188,7 +189,10 @@ $BIN/mongod --dbpath /tmp/smokedb --shutdown
   from S3 unless `RG_PATH`/`FD_PATH` are set; compile.sh points them at
   `tools/rg` and `tools/fd`.
 - Version stamping works without git: `MONGO_VERSION` env (set by compile.sh)
-  or the `.mongo_version` file in the source root.
+  or the `.mongo_version` file in the source root. The `gitVersion` field of
+  `mongod --version` is `--define=GIT_COMMIT_HASH`, which the tree's `.bazelrc`
+  defaults to `"nogitversion"`; compile.sh passes `GIT_COMMIT_HASH` env, else
+  `git rev-parse HEAD` of SOURCE_DIR, else that default.
 
 ## Running tests with resmoke (offline)
 

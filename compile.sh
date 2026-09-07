@@ -25,6 +25,8 @@
 #   REPO_CACHE    bazel repository cache dir   (default: <script dir>/cache/repo_cache)
 #   TARGET        bazel target to build        (default: install-devcore)
 #   MONGO_VERSION version to stamp             (default: 8.3.8)
+#   GIT_COMMIT_HASH gitVersion shown by mongod --version
+#                 (default: git rev-parse HEAD of SOURCE_DIR, else "nogitversion")
 #   MARCH         -march value                 (default: sandybridge, mongo's own default)
 #   STATIC_CXX_RUNTIME 1 = link libstdc++/libgcc statically (default: 1)
 #   JOBS          bazel --jobs                 (default: bazel decides)
@@ -56,6 +58,7 @@ BAZEL_REAL=${BAZEL_REAL:-$SCRIPT_DIR/tools/bazel-7.5.0-mongo_06d753863d-linux-x8
 REPO_CACHE=${REPO_CACHE:-$SCRIPT_DIR/cache/repo_cache}
 TARGET=${TARGET:-install-devcore}
 MONGO_VERSION=${MONGO_VERSION:-8.3.8}
+GIT_COMMIT_HASH=${GIT_COMMIT_HASH:-$(git -C "$SOURCE_DIR" rev-parse HEAD 2>/dev/null || echo nogitversion)}
 OFFLINE=${OFFLINE:-1}
 MARCH=${MARCH:-sandybridge}
 STATIC_CXX_RUNTIME=${STATIC_CXX_RUNTIME:-1}
@@ -274,6 +277,9 @@ BAZEL_ARGS=(
     --action_env=CXX="$CXX"
     --action_env=AR="$AR"
     --define=MONGO_VERSION="$MONGO_VERSION"
+    # The tree's .bazelrc defaults GIT_COMMIT_HASH to "nogitversion" (MongoDB's CI
+    # overrides it on the command line); it becomes gitVersion in `mongod --version`.
+    --define=GIT_COMMIT_HASH="$GIT_COMMIT_HASH"
     # External-repo headers (abseil, zlib, ...) are angle-included by mongo
     # sources; this feature exposes them via -isystem instead of -iquote.
     --features=external_include_paths
